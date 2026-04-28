@@ -1,7 +1,6 @@
 package walk
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/BreakPointSoftware/annon/internal/detection"
@@ -17,163 +16,178 @@ type Config struct {
 }
 
 type Walker struct {
-	cfg   Config
-	cache *TypeCache
-}
-
-type decision struct {
-	skip         bool
-	remove       bool
-	strategyName string
+	typed *TypedCopier
+	blob  *BlobBuilder
 }
 
 func New(cfg Config, cache *TypeCache) *Walker {
 	if cache == nil {
 		cache = NewTypeCache()
 	}
-	return &Walker{cfg: cfg, cache: cache}
+	decider := NewDecider(cfg)
+	return &Walker{
+		typed: NewTypedCopier(cfg, decider, cache),
+		blob:  NewBlobBuilder(cfg, decider, cache),
+	}
 }
 
 func (w *Walker) Copy(input any) (any, error) {
+	return w.typed.Copy(input)
+}
+
+type TypedCopier struct {
+	cfg     Config
+	decider *Decider
+	cache   *TypeCache
+}
+
+func NewTypedCopier(cfg Config, decider *Decider, cache *TypeCache) *TypedCopier {
+	return &TypedCopier{cfg: cfg, decider: decider, cache: cache}
+}
+
+func (c *TypedCopier) Copy(input any) (any, error) {
 	if input == nil {
 		return nil, nil
 	}
 	v := reflect.ValueOf(input)
-	cloned, err := w.copyValue(v, "", "", true)
+	cloned, err := c.copyValue(v, "", "", true)
 	if err != nil {
 		return nil, err
 	}
 	return cloned.Interface(), nil
 }
 
-func (w *Walker) copyValue(v reflect.Value, fieldName string, tag string, allowDecision bool) (reflect.Value, error) {
+func (c *TypedCopier) copyValue(v reflect.Value, fieldName string, tag string, allowDecision bool) (reflect.Value, error) {
 	if !v.IsValid() {
 		return v, nil
 	}
 	if allowDecision {
-		dec, err := w.decide(fieldName, tag, valueInterface(v))
+		dec, err := c.decider.Decide(fieldName, tag, valueInterface(v))
 		if err != nil {
 			return reflect.Value{}, err
 		}
 		if dec.skip {
-			return w.cloneValue(v)
+			return c.cloneValue(v)
 		}
 		if dec.remove {
 			return reflect.Zero(v.Type()), nil
 		}
 		if dec.strategyName != "" {
-			return w.applyStrategy(v, dec.strategyName)
+			return c.applyTypedAction(v, dec.strategyName)
 		}
 	}
+	return c.copyChildren(v, fieldName, tag)
+}
+
+func (c *TypedCopier) copyChildren(v reflect.Value, fieldName string, tag string) (reflect.Value, error) {
 	switch v.Kind() {
 	case reflect.Interface:
-		if v.IsNil() {
-			return reflect.Zero(v.Type()), nil
-		}
-		copied, err := w.copyValue(v.Elem(), fieldName, tag, true)
-		if err != nil {
-			return reflect.Value{}, err
-		}
-		out := reflect.New(v.Type()).Elem(); out.Set(copied); return out, nil
+		return c.copyInterface(v, fieldName, tag)
 	case reflect.Pointer:
-		if v.IsNil() { return reflect.Zero(v.Type()), nil }
-		copied, err := w.copyValue(v.Elem(), "", "", true)
-		if err != nil { return reflect.Value{}, err }
-		out := reflect.New(v.Type().Elem()); out.Elem().Set(copied); return out, nil
+		return c.copyPointer(v)
 	case reflect.Struct:
-		out := reflect.New(v.Type()).Elem()
-		for _, meta := range w.cache.StructFields(v.Type()) {
-			copied, err := w.copyValue(v.FieldByIndex(meta.Index), meta.DetectionName("typed"), meta.AnonymiseTag, true)
-			if err != nil { return reflect.Value{}, err }
-			out.FieldByIndex(meta.Index).Set(copied)
-		}
-		return out, nil
+		return c.copyStruct(v)
 	case reflect.Map:
-		if v.IsNil() { return reflect.Zero(v.Type()), nil }
-		out := reflect.MakeMapWithSize(v.Type(), v.Len())
-		iter := v.MapRange()
-		for iter.Next() {
-			key, value := iter.Key(), iter.Value(); field := ""
-			if key.Kind() == reflect.String { field = key.String() }
-			copied, err := w.copyValue(value, field, "", true)
-			if err != nil { return reflect.Value{}, err }
-			out.SetMapIndex(key, copied)
-		}
-		return out, nil
+		return c.copyMap(v)
 	case reflect.Slice:
-		if v.IsNil() { return reflect.Zero(v.Type()), nil }
-		out := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
-		for i := 0; i < v.Len(); i++ {
-			copied, err := w.copyValue(v.Index(i), "", "", true)
-			if err != nil { return reflect.Value{}, err }
-			out.Index(i).Set(copied)
-		}
-		return out, nil
+		return c.copySlice(v)
 	case reflect.Array:
-		out := reflect.New(v.Type()).Elem()
-		for i := 0; i < v.Len(); i++ {
-			copied, err := w.copyValue(v.Index(i), "", "", true)
-			if err != nil { return reflect.Value{}, err }
-			out.Index(i).Set(copied)
-		}
-		return out, nil
+		return c.copyArray(v)
 	default:
 		return v, nil
 	}
 }
 
-func (w *Walker) cloneValue(v reflect.Value) (reflect.Value, error) { return w.copyValue(v, "", "", false) }
+func (c *TypedCopier) copyInterface(v reflect.Value, fieldName string, tag string) (reflect.Value, error) {
+	if v.IsNil() {
+		return reflect.Zero(v.Type()), nil
+	}
+	copied, err := c.copyValue(v.Elem(), fieldName, tag, true)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	out := reflect.New(v.Type()).Elem()
+	out.Set(copied)
+	return out, nil
+}
 
-func (w *Walker) decide(fieldName, tag string, value any) (decision, error) {
-	if w.cfg.UseTags {
-		parsed := parseTag(tag)
-		if err := w.validateTag(parsed); err != nil { return decision{}, err }
-		if parsed.skip { return decision{skip: true}, nil }
-		if parsed.remove { return decision{remove: true, strategyName: parsed.strategyName}, nil }
-		if parsed.strategyName != "" && !parsed.auto { return decision{strategyName: parsed.strategyName}, nil }
-		if parsed.auto {
-			match := w.detect(fieldName, value)
-			if match.Found() { return decision{strategyName: string(match.Strategy)}, nil }
-			return decision{}, nil
+func (c *TypedCopier) copyPointer(v reflect.Value) (reflect.Value, error) {
+	if v.IsNil() {
+		return reflect.Zero(v.Type()), nil
+	}
+	copied, err := c.copyValue(v.Elem(), "", "", true)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	out := reflect.New(v.Type().Elem())
+	out.Elem().Set(copied)
+	return out, nil
+}
+
+func (c *TypedCopier) copyStruct(v reflect.Value) (reflect.Value, error) {
+	out := reflect.New(v.Type()).Elem()
+	for _, meta := range c.cache.StructFields(v.Type()) {
+		copied, err := c.copyValue(v.FieldByIndex(meta.Index), meta.DetectionName("typed"), meta.AnonymiseTag, true)
+		if err != nil {
+			return reflect.Value{}, err
 		}
+		out.FieldByIndex(meta.Index).Set(copied)
 	}
-	match := w.detect(fieldName, value)
-	if match.Found() {
-		if match.Strategy == detection.Remove { return decision{remove: true, strategyName: string(match.Strategy)}, nil }
-		return decision{strategyName: string(match.Strategy)}, nil
-	}
-	return decision{}, nil
+	return out, nil
 }
 
-func (w *Walker) detect(fieldName string, value any) detection.Match {
-	if w.cfg.Detector == nil { return detection.NoMatchResult() }
-	if w.cfg.UseFieldDetection && w.cfg.UseValueDetection { return w.cfg.Detector.Detect(fieldName, value) }
-	if w.cfg.UseFieldDetection {
-		if detector, ok := w.cfg.Detector.(detection.FieldDetector); ok { return detector.DetectField(fieldName) }
-		return detection.NoMatchResult()
+func (c *TypedCopier) copyMap(v reflect.Value) (reflect.Value, error) {
+	if v.IsNil() {
+		return reflect.Zero(v.Type()), nil
 	}
-	if w.cfg.UseValueDetection {
-		if detector, ok := w.cfg.Detector.(detection.ValueDetector); ok { return detector.DetectValue(value) }
-		return detection.NoMatchResult()
+	out := reflect.MakeMapWithSize(v.Type(), v.Len())
+	iter := v.MapRange()
+	for iter.Next() {
+		key, value := iter.Key(), iter.Value()
+		field := ""
+		if key.Kind() == reflect.String {
+			field = key.String()
+		}
+		copied, err := c.copyValue(value, field, "", true)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		out.SetMapIndex(key, copied)
 	}
-	return detection.NoMatchResult()
+	return out, nil
 }
 
-func (w *Walker) applyStrategy(v reflect.Value, strategyName string) (reflect.Value, error) {
-	result, err := redactcore.Apply(strategyName, valueInterface(v), w.cfg.Preservation)
-	if err != nil { return reflect.Value{}, err }
-	if result == nil { return reflect.Zero(v.Type()), nil }
-	resultValue := reflect.ValueOf(result)
-	if resultValue.Type().AssignableTo(v.Type()) { return resultValue, nil }
-	if resultValue.Type().ConvertibleTo(v.Type()) { return resultValue.Convert(v.Type()), nil }
-	if v.Kind() == reflect.Interface { out := reflect.New(v.Type()).Elem(); out.Set(resultValue); return out, nil }
-	return v, nil
+func (c *TypedCopier) copySlice(v reflect.Value) (reflect.Value, error) {
+	if v.IsNil() {
+		return reflect.Zero(v.Type()), nil
+	}
+	out := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
+	for i := 0; i < v.Len(); i++ {
+		copied, err := c.copyValue(v.Index(i), "", "", true)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		out.Index(i).Set(copied)
+	}
+	return out, nil
+}
+
+func (c *TypedCopier) copyArray(v reflect.Value) (reflect.Value, error) {
+	out := reflect.New(v.Type()).Elem()
+	for i := 0; i < v.Len(); i++ {
+		copied, err := c.copyValue(v.Index(i), "", "", true)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		out.Index(i).Set(copied)
+	}
+	return out, nil
+}
+
+func (c *TypedCopier) cloneValue(v reflect.Value) (reflect.Value, error) { return c.copyValue(v, "", "", false) }
+
+func (c *TypedCopier) applyTypedAction(v reflect.Value, strategyName string) (reflect.Value, error) {
+	return applyAction(v, strategyName, c.cfg)
 }
 
 func valueInterface(v reflect.Value) any { if !v.IsValid() { return nil }; return v.Interface() }
-
-func (w *Walker) validateTag(parsed parsedTag) error {
-	if parsed.empty || parsed.skip || parsed.auto || parsed.remove { return nil }
-	if !redactcore.SupportedStrategy(parsed.strategyName) { return fmt.Errorf("unknown anonymise tag strategy %q", parsed.strategyName) }
-	return nil
-}
