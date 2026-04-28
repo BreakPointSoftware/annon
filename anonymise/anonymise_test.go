@@ -1,75 +1,64 @@
 package anonymise
 
 import (
-	"errors"
-	"reflect"
+	"bytes"
+	"strings"
 	"testing"
-
-	"github.com/BreakPointSoftware/annon/detection"
 )
 
-func TestNewInitialisesWalker(t *testing.T) {
+type customer struct {
+	ID     string `json:"id" yaml:"id"`
+	Email  string `json:"email" yaml:"email"`
+	Secret string `json:"secret" yaml:"secret" anonymise:"remove"`
+	Note   string `json:"note" yaml:"note" anonymise:"false"`
+}
+
+func TestCopyJSONYAMLAndBlobs(t *testing.T) {
 	a, err := New()
-	if err != nil {
-		t.Fatal(err)
+	if err != nil { t.Fatal(err) }
+	input := customer{ID: "123", Email: "greg@example.com", Secret: "secret", Note: "greg@example.com"}
+
+	copyAny, err := a.Copy(input)
+	if err != nil { t.Fatal(err) }
+	copyValue := copyAny.(customer)
+	if copyValue.Email != "g***@example.com" || copyValue.Secret != "" || copyValue.Note != "greg@example.com" {
+		t.Fatalf("unexpected copy result: %+v", copyValue)
 	}
-	if a.walker == nil || a.cache == nil || a.config.Strategies["email"] == nil {
-		t.Fatal("anonymiser was not initialised correctly")
+
+	jsonBlob, err := a.JSON(input)
+	if err != nil { t.Fatal(err) }
+	if !bytes.Contains(jsonBlob, []byte(`"email":"g***@example.com"`)) || bytes.Contains(jsonBlob, []byte(`"secret"`)) {
+		t.Fatalf("unexpected json output: %s", jsonBlob)
 	}
+
+	yamlBlob, err := a.YAML(input)
+	if err != nil { t.Fatal(err) }
+	if !strings.Contains(string(yamlBlob), "email: g***@example.com") || strings.Contains(string(yamlBlob), "secret:") {
+		t.Fatalf("unexpected yaml output: %s", yamlBlob)
+	}
+
+	rawJSON := []byte(`{"email":"greg@example.com","vehicle":{"reg":"AB12 CDE"}}`)
+	safeJSON, err := a.FromJSON(rawJSON)
+	if err != nil { t.Fatal(err) }
+	if !bytes.Contains(safeJSON, []byte(`"reg":"AB12 ***"`)) { t.Fatalf("unexpected raw json output: %s", safeJSON) }
+
+	rawYAML := []byte("email: greg@example.com\nvehicle:\n  reg: AB12 CDE\n")
+	safeYAML, err := a.FromYAML(rawYAML)
+	if err != nil { t.Fatal(err) }
+	if !strings.Contains(string(safeYAML), "reg: AB12 ***") { t.Fatalf("unexpected raw yaml output: %s", safeYAML) }
 }
 
-func TestNewReturnsOptionError(t *testing.T) {
-	want := errors.New("boom")
-	_, err := New(func(*Config) error { return want })
-	if !errors.Is(err, want) {
-		t.Fatalf("expected option error, got %v", err)
+func TestFieldRulesAndValueDetection(t *testing.T) {
+	type alias struct { Alias string `json:"customerAlias"` }
+	jsonBlob, err := JSON(alias{Alias: "secret"}, WithFieldRules(StrongRule(RedactStrategy, "customerAlias")))
+	if err != nil { t.Fatal(err) }
+	if !bytes.Contains(jsonBlob, []byte(`"customerAlias":"[REDACTED]"`)) {
+		t.Fatalf("unexpected field-rule json: %s", jsonBlob)
 	}
-}
 
-func TestAdditionalFieldRulesAreApplied(t *testing.T) {
-	type custom struct {
-		Alias string `json:"customerAlias"`
-	}
-	a, err := New(WithFieldRules(detection.StrongRule(detection.Redact, "customerAlias")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := a.JSON(custom{Alias: "secret"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(result) != `{"customerAlias":"[REDACTED]"}` {
-		t.Fatalf("unexpected custom field-rule output: %s", result)
-	}
-}
-
-func TestCustomDetectorAndFieldRulesConflict(t *testing.T) {
-	_, err := New(
-		WithDetector(detection.NewCompiledDetector(nil, detection.PatternValueDetector{}, false)),
-		WithFieldRules(detection.StrongRule(detection.Redact, "customerAlias")),
-	)
-	if err == nil {
-		t.Fatal("expected conflicting detector/field-rule configuration to fail")
-	}
-}
-
-func TestReusableAnonymiserReusesTypeCache(t *testing.T) {
-	a, err := New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	type sample struct {
-		Email string `json:"email"`
-	}
-	if _, err := a.JSON(sample{Email: "greg@example.com"}); err != nil {
-		t.Fatal(err)
-	}
-	first := a.cache.StructFields(reflect.TypeOf(sample{}))
-	if _, err := a.JSON(sample{Email: "one@example.com"}); err != nil {
-		t.Fatal(err)
-	}
-	second := a.cache.StructFields(reflect.TypeOf(sample{}))
-	if &first[0] != &second[0] {
-		t.Fatal("expected reusable anonymiser to retain cached field metadata")
+	safe, err := FromJSON([]byte(`{"note":"greg@example.com"}`), WithFieldDetection(false), WithValueDetection(true))
+	if err != nil { t.Fatal(err) }
+	if !bytes.Contains(safe, []byte(`"note":"g***@example.com"`)) {
+		t.Fatalf("unexpected value-detection output: %s", safe)
 	}
 }

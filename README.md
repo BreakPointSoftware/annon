@@ -1,24 +1,24 @@
 # annon
 
-`annon` is a Go library for anonymising sensitive structured data before logging,
+`annon` is a Go library for anonymising sensitive data before logging,
 exporting, serialising, or sending it to telemetry.
 
-The public API lives in `github.com/BreakPointSoftware/annon/anonymise`.
+The repository now exposes two public packages only:
 
-## Principles
+- `github.com/BreakPointSoftware/annon/anonymise`
+- `github.com/BreakPointSoftware/annon/redact`
 
-- Safety
-- Predictability
-- Extensibility
-- Performance
-- Clear package boundaries
-- Non-mutating behaviour by default
-- British English spelling throughout
+Everything else lives under `internal/...`.
 
-## Public API
+## Public Packages
+
+### `anonymise`
+
+Use `anonymise` to walk structured data, apply field and value detection, and
+return anonymised copies or serialised output.
 
 ```go
-safe, err := anonymise.Copy(customer)
+safeCustomer, err := anonymise.Copy(customer)
 
 jsonBlob, err := anonymise.JSON(customer)
 
@@ -29,46 +29,107 @@ safeJSON, err := anonymise.FromJSON(rawJSON)
 safeYAML, err := anonymise.FromYAML(rawYAML)
 ```
 
-All package-level functions accept options, and `anonymise.New(...)` returns a
-reusable instance plus an error if configuration is invalid.
-
 Reusable instance:
 
 ```go
-a := anonymise.New(
-    anonymise.WithDefaultStrategies(),
-    anonymise.WithDefaultFieldDetection(),
+a, err := anonymise.New(
     anonymise.WithValueDetection(true),
 )
 
-safeCustomer, err := a.Copy(customer)
-safeJSON, err := a.JSON(customer)
+safeAny, err := a.Copy(customer)
+jsonBlob, err := a.JSON(customer)
 ```
 
-## Decision Order
+### `redact`
+
+Use `redact` for direct single-value redaction without structured walking.
+
+```go
+safeEmail := redact.Email("greg@example.com")
+safePhone := redact.Phone("07700 900123")
+safePostcode := redact.Postcode("TN9 1XA")
+safeReg := redact.VehicleRegistration("AB12 CDE")
+safeName := redact.Name("Greg Bryant")
+safeText := redact.Redact("secret")
+```
+
+Reusable configured redactor:
+
+```go
+r, err := redact.New(
+    redact.WithRedactChar('x'),
+)
+
+safeEmail := r.Email("greg@example.com")
+```
+
+## Public Configuration
+
+Preservation configuration is public through the `anonymise` package.
+
+```go
+cfg := anonymise.PreservationConfig{
+    RedactionText: "[hidden]",
+    RedactChar:    'x',
+    Email: anonymise.EmailConfig{
+        KeepLocalPrefix: 2,
+        KeepDomain:      true,
+    },
+    Phone: anonymise.PhoneConfig{
+        KeepLast: 3,
+    },
+    Name: anonymise.NameConfig{
+        KeepPrefix: 1,
+    },
+    Postcode: anonymise.PostcodeConfig{
+        KeepOutward: true,
+    },
+    VehicleRegistration: anonymise.VehicleRegistrationConfig{
+        KeepPrefix: 2,
+    },
+}
+```
+
+Apply it to structured anonymisation with:
+
+- `anonymise.WithPreservation(cfg)`
+
+Apply equivalent redaction settings to direct redaction with:
+
+- `redact.WithConfig(redact.Config(cfg))`
+
+## Detection Order
+
+Structured anonymisation follows this order:
 
 1. `anonymise:"false"`
-2. Explicit tag strategy
-3. Strong field-name match
-4. Fallback field-name match
-5. Contains field-name match
-6. Value-pattern detection
-7. No anonymisation
+2. explicit tag strategy
+3. strong field-name match
+4. fallback field-name match
+5. contains field-name match
+6. value-pattern detection
+7. no anonymisation
 
-## Tag Behaviour
+## Supported Tags
 
-- `anonymise:"false"`: never anonymise the field
-- `anonymise:"true"` and `anonymise:"auto"`: infer a strategy
-- `anonymise:"email"`, `"phone"`, `"postcode"`, `"name"`, `"firstName"`, `"surname"`, `"vehicleRegistration"`: force strategy
-- `anonymise:"redact"`: use configured redaction text
-- `anonymise:"remove"`: zero in copy mode, omit in JSON/YAML mode
+- `anonymise:"false"`
+- `anonymise:"true"`
+- `anonymise:"auto"`
+- `anonymise:"email"`
+- `anonymise:"phone"`
+- `anonymise:"postcode"`
+- `anonymise:"name"`
+- `anonymise:"firstName"`
+- `anonymise:"surname"`
+- `anonymise:"vehicleRegistration"`
+- `anonymise:"redact"`
+- `anonymise:"remove"`
 
-Unknown explicit tag strategy names are treated as configuration errors when a
-field is walked.
+Unknown explicit tag strategy names are treated as errors.
 
-## Default Detection
+## Field Detection
 
-Default field-name detection includes:
+Default field detection includes:
 
 - strong email matches such as `email` and `emailAddress`
 - strong phone matches such as `phoneNumber` and `mobileNumber`
@@ -76,7 +137,8 @@ Default field-name detection includes:
 - strong name-part matches such as `firstName` and `surname`
 - strong vehicle registration matches such as `vehicleRegistration`, `vehicleReg`, and `vrm`
 - fallback matches such as `reg` and `phone`
-- contains matches such as `customerName`, excluding false positives like `username`, `fileName`, `hostName`, and `domainName`
+- contains matches such as `customerName`
+- built-in exclusions for `username`, `fileName`, `hostName`, and `domainName`
 
 Value detection is opt-in and checks strings for:
 
@@ -85,45 +147,58 @@ Value detection is opt-in and checks strings for:
 - UK postcodes
 - UK vehicle registrations
 
-Additional field rules can be added with `anonymise.WithFieldRules(...)` when
-the default compiled detector is used.
+Additional field rules can be added with:
 
-## Output Modes
+- `anonymise.WithFieldRules(...)`
+
+## Output Behaviour
 
 - `Copy` returns the same concrete Go type and does not mutate the input
 - `JSON` and `YAML` walk Go values into neutral map/list structures before serialising
 - `FromJSON` and `FromYAML` anonymise raw blobs without mutating the input bytes
+- `anonymise:"remove"` zeroes a field in copy mode and omits it from JSON/YAML output
 
-`anonymise:"remove"` behaviour:
+## Internal Structure
 
-- copy mode: zero value
-- JSON/YAML mode: omitted field
+The repo is organised around two public packages and internal domain packages:
+
+```text
+annon/
+├── anonymise/
+├── redact/
+└── internal/
+    ├── detection/
+    ├── encode/
+    ├── redactcore/
+    ├── support/
+    │   └── normalise/
+    └── walk/
+```
+
+### Internal responsibilities
+
+- `internal/detection`: field and value matching
+- `internal/encode`: JSON and YAML decode/encode helpers
+- `internal/redactcore`: concrete redaction implementations and shared config
+- `internal/support/normalise`: low-level field-name normalisation helpers
+- `internal/walk`: typed and blob traversal, tag handling, and metadata caching
 
 ## Testing
 
-The repository uses same-package tests throughout. Internal implementation
-details are tested directly in their owning packages rather than through
-external `_test` packages.
+The repository uses same-package tests only.
 
-## Behaviour Checklist
+- public integration tests live in `anonymise` and `redact`
+- internal implementation tests live in the owning `internal/...` packages
+- benchmark coverage exists for detection, walking, and public anonymisation entrypoints
 
-The implementation is intended to be built and tested in the following order:
+Run the full suite with:
 
-1. Field normalisation
-2. Strong field-name detection
-3. Basic email strategy
-4. Copy mode for simple structs
-5. JSON mode for simple structs
-6. Nested structs, maps, slices, arrays, pointers
-7. Preservation config
-8. Struct tags
-9. Fallback and contains detection
-10. Raw JSON input
-11. Value detection
-12. YAML support
-13. Performance caches
+```bash
+go test ./...
+```
 
-Same-package tests cover internal implementation details in `detection`,
-`strategy`, `walker`, `encoder`, and `internal` packages. Public API tests in
-`anonymise` prove cross-package integration without relying on `_test`
-packages.
+Run benchmarks with:
+
+```bash
+go test -bench=. ./...
+```
