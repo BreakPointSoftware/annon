@@ -1,0 +1,36 @@
+# Binaries and build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.a
+*.out
+bin/
+dist/
+build/
+
+# Test and coverage output
+*.test
+*.prof
+*.coverprofile
+coverage.out
+cover.out
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Dependency/vendor output if generated locally
+vendor/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
