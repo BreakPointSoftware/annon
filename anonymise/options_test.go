@@ -3,8 +3,8 @@ package anonymise
 import (
 	"testing"
 
-	"github.com/your-org/annon/detection"
-	"github.com/your-org/annon/preservation"
+	"github.com/BreakPointSoftware/annon/detection"
+	"github.com/BreakPointSoftware/annon/preservation"
 )
 
 func TestOptions(t *testing.T) {

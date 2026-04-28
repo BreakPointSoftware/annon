@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	strategypkg "github.com/your-org/annon/strategy"
+	strategypkg "github.com/BreakPointSoftware/annon/strategy"
 )
 
 var omitValue = &struct{}{}

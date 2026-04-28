@@ -3,7 +3,7 @@ package strategy
 import (
 	"testing"
 
-	"github.com/your-org/annon/preservation"
+	"github.com/BreakPointSoftware/annon/preservation"
 )
 
 func TestEmailStrategy(t *testing.T) {

@@ -1,6 +1,6 @@
 package strategy
 
-import "github.com/your-org/annon/preservation"
+import "github.com/BreakPointSoftware/annon/preservation"
 
 type Context struct {
 	Preservation preservation.Config

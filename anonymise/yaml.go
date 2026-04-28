@@ -1,6 +1,6 @@
 package anonymise
 
-import "github.com/your-org/annon/encoder"
+import "github.com/BreakPointSoftware/annon/encoder"
 
 func (a *Anonymiser) YAML(input any) ([]byte, error) {
 	neutral, err := a.walker.BlobFromValue(input, "yaml")

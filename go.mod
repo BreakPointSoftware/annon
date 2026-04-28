@@ -1,4 +1,4 @@
-module github.com/your-org/annon
+module github.com/BreakPointSoftware/annon
 
 go 1.23.0
 

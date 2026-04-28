@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/your-org/annon/detection"
+	"github.com/BreakPointSoftware/annon/detection"
 )
 
 type FieldMeta struct {

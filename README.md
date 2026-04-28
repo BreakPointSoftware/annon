@@ -3,7 +3,7 @@
 `annon` is a Go library for anonymising sensitive structured data before logging,
 exporting, serialising, or sending it to telemetry.
 
-The public API lives in `github.com/your-org/annon/anonymise`.
+The public API lives in `github.com/BreakPointSoftware/annon/anonymise`.
 
 ## Principles
 

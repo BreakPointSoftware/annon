@@ -3,8 +3,8 @@ package anonymise
 import (
 	"fmt"
 
-	"github.com/your-org/annon/detection"
-	"github.com/your-org/annon/walker"
+	"github.com/BreakPointSoftware/annon/detection"
+	"github.com/BreakPointSoftware/annon/walker"
 )
 
 type Anonymiser struct {

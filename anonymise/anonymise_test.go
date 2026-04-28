@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/your-org/annon/detection"
+	"github.com/BreakPointSoftware/annon/detection"
 )
 
 func TestNewInitialisesWalker(t *testing.T) {

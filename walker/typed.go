@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/your-org/annon/detection"
-	"github.com/your-org/annon/preservation"
-	strategypkg "github.com/your-org/annon/strategy"
+	"github.com/BreakPointSoftware/annon/detection"
+	"github.com/BreakPointSoftware/annon/preservation"
+	strategypkg "github.com/BreakPointSoftware/annon/strategy"
 )
 
 type Config struct {
