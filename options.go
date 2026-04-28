@@ -1,4 +1,4 @@
-package anonymise
+package annon
 
 import internaldetection "github.com/BreakPointSoftware/annon/internal/detection"
 

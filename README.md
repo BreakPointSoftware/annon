@@ -5,35 +5,35 @@ exporting, serialising, or sending it to telemetry.
 
 The repository now exposes two public packages only:
 
-- `github.com/BreakPointSoftware/annon/anonymise`
+- `github.com/BreakPointSoftware/annon`
 - `github.com/BreakPointSoftware/annon/redact`
 
 Everything else lives under `internal/...`.
 
 ## Public Packages
 
-### `anonymise`
+### `annon`
 
-Use `anonymise` to walk structured data, apply field and value detection, and
+Use `annon` to walk structured data, apply field and value detection, and
 return anonymised copies or serialised output.
 
 ```go
-safeCustomer, err := anonymise.Copy(customer)
+safeCustomer, err := annon.Copy(customer)
 
-jsonBlob, err := anonymise.JSON(customer)
+jsonBlob, err := annon.JSON(customer)
 
-yamlBlob, err := anonymise.YAML(customer)
+yamlBlob, err := annon.YAML(customer)
 
-safeJSON, err := anonymise.FromJSON(rawJSON)
+safeJSON, err := annon.FromJSON(rawJSON)
 
-safeYAML, err := anonymise.FromYAML(rawYAML)
+safeYAML, err := annon.FromYAML(rawYAML)
 ```
 
 Reusable instance:
 
 ```go
-a, err := anonymise.New(
-    anonymise.WithValueDetection(true),
+a, err := annon.New(
+    annon.WithValueDetection(true),
 )
 
 safeAny, err := a.Copy(customer)
@@ -65,26 +65,26 @@ safeEmail := r.Email("greg@example.com")
 
 ## Public Configuration
 
-Preservation configuration is public through the `anonymise` package.
+Preservation configuration is public through the root `annon` package.
 
 ```go
-cfg := anonymise.PreservationConfig{
+cfg := annon.PreservationConfig{
     RedactionText: "[hidden]",
     RedactChar:    'x',
-    Email: anonymise.EmailConfig{
+    Email: annon.EmailConfig{
         KeepLocalPrefix: 2,
         KeepDomain:      true,
     },
-    Phone: anonymise.PhoneConfig{
+    Phone: annon.PhoneConfig{
         KeepLast: 3,
     },
-    Name: anonymise.NameConfig{
+    Name: annon.NameConfig{
         KeepPrefix: 1,
     },
-    Postcode: anonymise.PostcodeConfig{
+    Postcode: annon.PostcodeConfig{
         KeepOutward: true,
     },
-    VehicleRegistration: anonymise.VehicleRegistrationConfig{
+    VehicleRegistration: annon.VehicleRegistrationConfig{
         KeepPrefix: 2,
     },
 }
@@ -92,7 +92,7 @@ cfg := anonymise.PreservationConfig{
 
 Apply it to structured anonymisation with:
 
-- `anonymise.WithPreservation(cfg)`
+- `annon.WithPreservation(cfg)`
 
 Apply equivalent redaction settings to direct redaction with:
 
@@ -149,7 +149,7 @@ Value detection is opt-in and checks strings for:
 
 Additional field rules can be added with:
 
-- `anonymise.WithFieldRules(...)`
+- `annon.WithFieldRules(...)`
 
 ## Output Behaviour
 
@@ -164,7 +164,7 @@ The repo is organised around two public packages and internal domain packages:
 
 ```text
 annon/
-├── anonymise/
+├── *.go
 ├── redact/
 └── internal/
     ├── detection/

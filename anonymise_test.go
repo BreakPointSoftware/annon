@@ -1,4 +1,4 @@
-package anonymise
+package annon
 
 import (
 	"bytes"

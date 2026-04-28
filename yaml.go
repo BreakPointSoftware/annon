@@ -1,4 +1,4 @@
-package anonymise
+package annon
 
 import "github.com/BreakPointSoftware/annon/internal/encode"
 
