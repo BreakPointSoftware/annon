@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/support/reflectx"
 )
 
 type Copier struct {
@@ -36,7 +37,7 @@ func (c *Copier) copyValue(inputValue reflect.Value, fieldName string, tag strin
 	}
 
 	if allowDecision {
-		fieldDecision, err := c.decider.Decide(fieldName, tag, valueInterface(inputValue))
+		fieldDecision, err := c.decider.Decide(fieldName, tag, reflectx.Interface(inputValue))
 		if err != nil {
 			return reflect.Value{}, err
 		}

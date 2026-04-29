@@ -2,10 +2,10 @@ package walk
 
 import (
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/BreakPointSoftware/annon/internal/detection"
+	"github.com/BreakPointSoftware/annon/internal/support/tags"
 )
 
 type FieldMeta struct {
@@ -86,8 +86,8 @@ func compileStructFields(t reflect.Type) []FieldMeta {
 			continue
 		}
 
-		jsonName, ignoreJSON := parseSerialiseTag(field.Tag.Get("json"))
-		yamlName, ignoreYAML := parseSerialiseTag(field.Tag.Get("yaml"))
+		jsonName, ignoreJSON := tags.ParseSerialiseTag(field.Tag.Get("json"))
+		yamlName, ignoreYAML := tags.ParseSerialiseTag(field.Tag.Get("yaml"))
 		_ = detection.Normalise(field.Name)
 
 		fields = append(fields, FieldMeta{
@@ -102,25 +102,4 @@ func compileStructFields(t reflect.Type) []FieldMeta {
 	}
 
 	return fields
-}
-
-func parseSerialiseTag(tag string) (string, bool) {
-	if tag == "-" {
-		return "", true
-	}
-
-	if tag == "" {
-		return "", false
-	}
-
-	parts := strings.Split(tag, ",")
-	if parts[0] == "-" {
-		return "", true
-	}
-
-	if parts[0] == "" {
-		return "", false
-	}
-
-	return parts[0], false
 }

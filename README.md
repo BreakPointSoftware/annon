@@ -163,6 +163,8 @@ annon/
     ├── output/
     ├── redactcore/
     └── support/
+        ├── reflectx/
+        ├── tags/
         └── normalise/
 ```
 
@@ -175,6 +177,8 @@ annon/
 - `internal/engine`: no-error orchestration and fallback handling for public `redact` APIs
 - `internal/output`: neutral output construction for JSON/YAML and raw blobs
 - `internal/redactcore`: concrete redaction implementations and shared config
+- `internal/support/reflectx`: low-level reflection helpers
+- `internal/support/tags`: low-level serialise tag parsing helpers
 - `internal/support/normalise`: low-level field-name normalisation helpers
 
 ## Testing

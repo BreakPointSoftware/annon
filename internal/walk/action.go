@@ -5,10 +5,11 @@ import (
 
 	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
+	"github.com/BreakPointSoftware/annon/internal/support/reflectx"
 )
 
 func applyAction(inputValue reflect.Value, strategyName string, copyConfig decision.Config) (reflect.Value, error) {
-	result, err := redactcore.Apply(strategyName, valueInterface(inputValue), copyConfig.Preservation)
+	result, err := redactcore.Apply(strategyName, reflectx.Interface(inputValue), copyConfig.Preservation)
 	if err != nil {
 		return reflect.Value{}, err
 	}
@@ -33,12 +34,4 @@ func applyAction(inputValue reflect.Value, strategyName string, copyConfig decis
 	}
 
 	return inputValue, nil
-}
-
-func valueInterface(inputValue reflect.Value) any {
-	if !inputValue.IsValid() {
-		return nil
-	}
-
-	return inputValue.Interface()
 }
