@@ -35,6 +35,24 @@ func fallbackValue(input any) any {
 	}
 }
 
+func requiresSafeFallback(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	inputValue := reflect.ValueOf(input)
+	if !inputValue.IsValid() {
+		return false
+	}
+
+	switch inputValue.Kind() {
+	case reflect.Func, reflect.Chan, reflect.UnsafePointer:
+		return true
+	default:
+		return false
+	}
+}
+
 func cloneJSONFallback() []byte {
 	return append([]byte(nil), jsonFallbackBytes...)
 }

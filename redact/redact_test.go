@@ -1,10 +1,12 @@
 package redact
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDirectFunctions(t *testing.T) {
@@ -85,6 +87,20 @@ func TestData(t *testing.T) {
 				assert.Equal(t, "g***@example.com", result)
 			},
 		},
+		{
+			name:  "func input falls back safely",
+			input: func() {},
+			assertFn: func(t *testing.T, result any) {
+				assert.Equal(t, "[REDACTED]", result)
+			},
+		},
+		{
+			name:  "primitive non-string value is preserved",
+			input: 42,
+			assertFn: func(t *testing.T, result any) {
+				assert.Equal(t, 42, result)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -136,6 +152,16 @@ func TestJSONAndYAMLHelpers(t *testing.T) {
 			assert.Contains(t, string(testCase.run()), testCase.contains)
 		})
 	}
+}
+
+func TestJSONAndYAMLHelpersAlwaysReturnValidPayloads(t *testing.T) {
+	jsonBytes := JSON(func() {})
+	var jsonValue any
+	require.NoError(t, json.Unmarshal(jsonBytes, &jsonValue))
+
+	yamlBytes := YAML(func() {})
+	var yamlValue any
+	require.NoError(t, yaml.Unmarshal(yamlBytes, &yamlValue))
 }
 
 func TestString(t *testing.T) {
