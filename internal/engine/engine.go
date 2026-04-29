@@ -10,7 +10,7 @@ import (
 
 type Engine struct {
 	config        Config
-	copier        *walk.Copier
+	walker        *walk.Walker
 	outputBuilder *output.Builder
 }
 
@@ -38,7 +38,7 @@ func New(config Config) *Engine {
 
 	return &Engine{
 		config:        config,
-		copier:        walk.New(decisionConfig, decider, cache),
+		walker:        walk.New(decisionConfig, decider, cache),
 		outputBuilder: output.New(decisionConfig, decider, cache),
 	}
 }
@@ -56,7 +56,7 @@ func (e *Engine) Data(input any) (result any) {
 		return fallbackValue(input)
 	}
 
-	redactedValue, err := e.copier.Copy(input)
+	redactedValue, err := e.walker.Copy(input)
 	if err != nil {
 		return fallbackValue(input)
 	}

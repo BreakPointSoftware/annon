@@ -13,17 +13,21 @@ type Copier struct {
 	cache   *TypeCache
 }
 
-func New(config decision.Config, decider *decision.Decider, cache *TypeCache) *Copier {
-	return &Copier{config: config, decider: decider, cache: cache}
+type Walker = Copier
+
+func New(config decision.Config, decider *decision.Decider, cache *TypeCache) *Walker {
+	return &Walker{config: config, decider: decider, cache: cache}
 }
 
-func (c *Copier) Copy(input any) (any, error) {
+func (w *Walker) Copy(input any) (any, error) {
 	if input == nil {
 		return nil, nil
 	}
 
 	inputValue := reflect.ValueOf(input)
-	copiedValue, err := c.copyValue(inputValue, "", "", true)
+
+	// Build a fresh typed value so redaction never mutates caller-owned data.
+	copiedValue, err := w.copyValue(inputValue, "", "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -31,19 +35,20 @@ func (c *Copier) Copy(input any) (any, error) {
 	return copiedValue.Interface(), nil
 }
 
-func (c *Copier) copyValue(inputValue reflect.Value, fieldName string, tag string, allowDecision bool) (reflect.Value, error) {
+func (w *Walker) copyValue(inputValue reflect.Value, fieldName string, tag string, allowDecision bool) (reflect.Value, error) {
 	if !inputValue.IsValid() {
 		return inputValue, nil
 	}
 
 	if allowDecision {
-		fieldDecision, err := c.decider.Decide(fieldName, tag, reflectx.Interface(inputValue))
+		// Apply tag and detector decisions before traversing child values.
+		fieldDecision, err := w.decider.Decide(fieldName, tag, reflectx.Interface(inputValue))
 		if err != nil {
 			return reflect.Value{}, err
 		}
 
 		if fieldDecision.Skip {
-			return c.cloneValue(inputValue)
+			return w.cloneValue(inputValue)
 		}
 
 		if fieldDecision.Remove {
@@ -51,38 +56,38 @@ func (c *Copier) copyValue(inputValue reflect.Value, fieldName string, tag strin
 		}
 
 		if fieldDecision.StrategyName != "" {
-			return c.applyTypedAction(inputValue, fieldDecision.StrategyName)
+			return w.applyTypedAction(inputValue, fieldDecision.StrategyName)
 		}
 	}
 
-	return c.copyChildren(inputValue, fieldName, tag)
+	return w.copyChildren(inputValue, fieldName, tag)
 }
 
-func (c *Copier) copyChildren(inputValue reflect.Value, fieldName string, tag string) (reflect.Value, error) {
+func (w *Walker) copyChildren(inputValue reflect.Value, fieldName string, tag string) (reflect.Value, error) {
 	switch inputValue.Kind() {
 	case reflect.Interface:
-		return c.copyInterface(inputValue, fieldName, tag)
+		return w.copyInterface(inputValue, fieldName, tag)
 	case reflect.Pointer:
-		return c.copyPointer(inputValue)
+		return w.copyPointer(inputValue)
 	case reflect.Struct:
-		return c.copyStruct(inputValue)
+		return w.copyStruct(inputValue)
 	case reflect.Map:
-		return c.copyMap(inputValue)
+		return w.copyMap(inputValue)
 	case reflect.Slice:
-		return c.copySlice(inputValue)
+		return w.copySlice(inputValue)
 	case reflect.Array:
-		return c.copyArray(inputValue)
+		return w.copyArray(inputValue)
 	default:
 		return inputValue, nil
 	}
 }
 
-func (c *Copier) copyInterface(inputValue reflect.Value, fieldName string, tag string) (reflect.Value, error) {
+func (w *Walker) copyInterface(inputValue reflect.Value, fieldName string, tag string) (reflect.Value, error) {
 	if inputValue.IsNil() {
 		return reflect.Zero(inputValue.Type()), nil
 	}
 
-	copiedValue, err := c.copyValue(inputValue.Elem(), fieldName, tag, true)
+	copiedValue, err := w.copyValue(inputValue.Elem(), fieldName, tag, true)
 	if err != nil {
 		return reflect.Value{}, err
 	}
@@ -92,12 +97,12 @@ func (c *Copier) copyInterface(inputValue reflect.Value, fieldName string, tag s
 	return outputValue, nil
 }
 
-func (c *Copier) copyPointer(inputValue reflect.Value) (reflect.Value, error) {
+func (w *Walker) copyPointer(inputValue reflect.Value) (reflect.Value, error) {
 	if inputValue.IsNil() {
 		return reflect.Zero(inputValue.Type()), nil
 	}
 
-	copiedValue, err := c.copyValue(inputValue.Elem(), "", "", true)
+	copiedValue, err := w.copyValue(inputValue.Elem(), "", "", true)
 	if err != nil {
 		return reflect.Value{}, err
 	}
@@ -107,11 +112,12 @@ func (c *Copier) copyPointer(inputValue reflect.Value) (reflect.Value, error) {
 	return outputPointer, nil
 }
 
-func (c *Copier) copyStruct(structValue reflect.Value) (reflect.Value, error) {
+func (w *Walker) copyStruct(structValue reflect.Value) (reflect.Value, error) {
 	copiedStruct := reflect.New(structValue.Type()).Elem()
 
-	for _, fieldMeta := range c.cache.StructFields(structValue.Type()) {
-		copiedValue, err := c.copyValue(structValue.FieldByIndex(fieldMeta.Index), fieldMeta.DetectionName("typed"), fieldMeta.AnonymiseTag, true)
+	// Struct fields are copied one by one so tags and detection can be applied per field.
+	for _, fieldMeta := range w.cache.StructFields(structValue.Type()) {
+		copiedValue, err := w.copyValue(structValue.FieldByIndex(fieldMeta.Index), fieldMeta.DetectionName("typed"), fieldMeta.AnonymiseTag, true)
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -122,7 +128,7 @@ func (c *Copier) copyStruct(structValue reflect.Value) (reflect.Value, error) {
 	return copiedStruct, nil
 }
 
-func (c *Copier) copyMap(mapValue reflect.Value) (reflect.Value, error) {
+func (w *Walker) copyMap(mapValue reflect.Value) (reflect.Value, error) {
 	if mapValue.IsNil() {
 		return reflect.Zero(mapValue.Type()), nil
 	}
@@ -133,11 +139,12 @@ func (c *Copier) copyMap(mapValue reflect.Value) (reflect.Value, error) {
 	for mapIterator.Next() {
 		mapKey := mapIterator.Key()
 		fieldName := ""
+
 		if mapKey.Kind() == reflect.String {
 			fieldName = mapKey.String()
 		}
 
-		copiedValue, err := c.copyValue(mapIterator.Value(), fieldName, "", true)
+		copiedValue, err := w.copyValue(mapIterator.Value(), fieldName, "", true)
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -148,14 +155,15 @@ func (c *Copier) copyMap(mapValue reflect.Value) (reflect.Value, error) {
 	return copiedMap, nil
 }
 
-func (c *Copier) copySlice(sliceValue reflect.Value) (reflect.Value, error) {
+func (w *Walker) copySlice(sliceValue reflect.Value) (reflect.Value, error) {
 	if sliceValue.IsNil() {
 		return reflect.Zero(sliceValue.Type()), nil
 	}
 
 	copiedSlice := reflect.MakeSlice(sliceValue.Type(), sliceValue.Len(), sliceValue.Len())
+
 	for index := 0; index < sliceValue.Len(); index++ {
-		copiedValue, err := c.copyValue(sliceValue.Index(index), "", "", true)
+		copiedValue, err := w.copyValue(sliceValue.Index(index), "", "", true)
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -166,10 +174,11 @@ func (c *Copier) copySlice(sliceValue reflect.Value) (reflect.Value, error) {
 	return copiedSlice, nil
 }
 
-func (c *Copier) copyArray(arrayValue reflect.Value) (reflect.Value, error) {
+func (w *Walker) copyArray(arrayValue reflect.Value) (reflect.Value, error) {
 	copiedArray := reflect.New(arrayValue.Type()).Elem()
+
 	for index := 0; index < arrayValue.Len(); index++ {
-		copiedValue, err := c.copyValue(arrayValue.Index(index), "", "", true)
+		copiedValue, err := w.copyValue(arrayValue.Index(index), "", "", true)
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -180,10 +189,10 @@ func (c *Copier) copyArray(arrayValue reflect.Value) (reflect.Value, error) {
 	return copiedArray, nil
 }
 
-func (c *Copier) cloneValue(inputValue reflect.Value) (reflect.Value, error) {
-	return c.copyValue(inputValue, "", "", false)
+func (w *Walker) cloneValue(inputValue reflect.Value) (reflect.Value, error) {
+	return w.copyValue(inputValue, "", "", false)
 }
 
-func (c *Copier) applyTypedAction(inputValue reflect.Value, strategyName string) (reflect.Value, error) {
-	return applyAction(inputValue, strategyName, c.config)
+func (w *Walker) applyTypedAction(inputValue reflect.Value, strategyName string) (reflect.Value, error) {
+	return applyAction(inputValue, strategyName, w.config)
 }
