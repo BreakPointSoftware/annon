@@ -1,14 +1,14 @@
 # annon
 
-`annon` is a Go library for anonymising sensitive data before logging,
+`annon` is a Go library for redacting sensitive data before logging,
 exporting, serialising, or sending it to telemetry.
 
-The repository now exposes two public packages only:
+The primary public package is:
 
-- `github.com/BreakPointSoftware/annon`
 - `github.com/BreakPointSoftware/annon/redact`
 
-Everything else lives under `internal/...`.
+Everything else lives under `internal/...` and is not part of the public
+compatibility contract.
 
 ## Stability
 
@@ -18,42 +18,13 @@ This library should be treated as pre-`v1`.
 - internal packages are not part of the compatibility contract
 - breaking changes may happen between releases while the design settles
 
-## Public Packages
+## Public API
 
-### `annon`
-
-Use `annon` to walk structured data, apply field and value detection, and
-return anonymised copies or serialised output.
-
-```go
-safeCustomer, err := annon.Copy(customer)
-
-jsonBlob, err := annon.JSON(customer)
-
-yamlBlob, err := annon.YAML(customer)
-
-safeJSON, err := annon.FromJSON(rawJSON)
-
-safeYAML, err := annon.FromYAML(rawYAML)
-```
-
-Reusable instance:
-
-```go
-a, err := annon.New(
-    annon.WithValueDetection(true),
-)
-
-safeAny, err := a.Copy(customer)
-jsonBlob, err := a.JSON(customer)
-```
-
-### `redact`
-
-Use `redact` as the primary public package for defensive redaction.
+Use `redact` as the public entrypoint for defensive redaction.
 
 ```go
 safeValue := redact.Data(customer)
+
 safeJSON := redact.JSON(customer)
 safeYAML := redact.YAML(customer)
 
@@ -61,11 +32,14 @@ safeJSONBytes := redact.JSONBytes(rawJSON)
 safeYAMLBytes := redact.YAMLBytes(rawYAML)
 ```
 
-These APIs are intended to be defensive for logging and export use cases:
+These APIs are intended for logging and export use cases:
 
 - they do not return errors
-- they must not panic
+- they are designed not to panic
 - JSON/YAML helpers always return valid fallback payloads on failure
+- caller input must not be mutated
+
+## Direct Value Redactors
 
 Use the direct string helpers when you already know the value type.
 
@@ -91,42 +65,38 @@ safeEmail := r.Email("greg@example.com")
 
 ## Public Configuration
 
-Preservation configuration is public through the root `annon` package.
+Preservation configuration is public through the `redact` package.
 
 ```go
-cfg := annon.PreservationConfig{
+cfg := redact.Config{
     RedactionText: "[hidden]",
     RedactChar:    'x',
-    Email: annon.EmailConfig{
+    Email: redact.EmailConfig{
         KeepLocalPrefix: 2,
         KeepDomain:      true,
     },
-    Phone: annon.PhoneConfig{
+    Phone: redact.PhoneConfig{
         KeepLast: 3,
     },
-    Name: annon.NameConfig{
+    Name: redact.NameConfig{
         KeepPrefix: 1,
     },
-    Postcode: annon.PostcodeConfig{
+    Postcode: redact.PostcodeConfig{
         KeepOutward: true,
     },
-    VehicleRegistration: annon.VehicleRegistrationConfig{
+    VehicleRegistration: redact.VehicleRegistrationConfig{
         KeepPrefix: 2,
     },
 }
 ```
 
-Apply it to structured anonymisation with:
+Apply it with:
 
-- `annon.WithPreservation(cfg)`
-
-Apply equivalent redaction settings to direct redaction with:
-
-- `redact.WithConfig(redact.Config(cfg))`
+- `redact.WithConfig(cfg)`
 
 ## Detection Order
 
-Structured anonymisation follows this order:
+Structured redaction follows this order:
 
 1. `anonymise:"false"`
 2. explicit tag strategy
@@ -134,7 +104,7 @@ Structured anonymisation follows this order:
 4. fallback field-name match
 5. contains field-name match
 6. value-pattern detection
-7. no anonymisation
+7. no redaction
 
 ## Supported Tags
 
@@ -151,7 +121,7 @@ Structured anonymisation follows this order:
 - `anonymise:"redact"`
 - `anonymise:"remove"`
 
-Unknown explicit tag strategy names are treated as errors.
+Unknown explicit tag strategy names are treated as errors internally.
 
 ## Field Detection
 
@@ -166,49 +136,43 @@ Default field detection includes:
 - contains matches such as `customerName`
 - built-in exclusions for `username`, `fileName`, `hostName`, and `domainName`
 
-Value detection is opt-in and checks strings for:
+Value detection is opt-in internally and checks strings for:
 
 - email addresses
 - UK mobile numbers
 - UK postcodes
 - UK vehicle registrations
 
-Additional field rules can be added with:
+## Fallback Behaviour
 
-- `annon.WithFieldRules(...)`
-
-## Output Behaviour
-
-- `Copy` returns the same concrete Go type and does not mutate the input
-- `JSON` and `YAML` walk Go values into neutral map/list structures before serialising
-- `FromJSON` and `FromYAML` anonymise raw blobs without mutating the input bytes
-- `anonymise:"remove"` zeroes a field in copy mode and omits it from JSON/YAML output
+- malformed JSON bytes return `{"redaction_error":true}`
+- malformed YAML bytes return `redaction_error: true`
+- unrecoverable value-level failures fall back conservatively rather than leaking the original value
 
 ## Internal Structure
 
-The repo is organised around two public packages and internal domain packages:
-
 ```text
 annon/
-├── *.go
 ├── redact/
 └── internal/
     ├── copy/
     ├── decision/
     ├── detection/
     ├── encode/
+    ├── engine/
     ├── output/
     ├── redactcore/
-    ├── support/
-    │   └── normalise/
+    └── support/
+        └── normalise/
 ```
 
 ### Internal responsibilities
 
 - `internal/copy`: typed deep-copy logic and struct metadata caching
-- `internal/decision`: tag parsing and anonymisation decision flow
+- `internal/decision`: tag parsing and redaction decision flow
 - `internal/detection`: field and value matching
 - `internal/encode`: JSON and YAML decode/encode helpers
+- `internal/engine`: no-error orchestration and fallback handling for public `redact` APIs
 - `internal/output`: neutral output construction for JSON/YAML and raw blobs
 - `internal/redactcore`: concrete redaction implementations and shared config
 - `internal/support/normalise`: low-level field-name normalisation helpers
@@ -217,9 +181,9 @@ annon/
 
 The repository uses same-package tests only.
 
-- public integration tests live in `annon` and `redact`
+- public integration tests live in `redact`
 - internal implementation tests live in the owning `internal/...` packages
-- benchmark coverage exists for detection, copy, output, and public anonymisation entrypoints
+- benchmark coverage exists for detection, copy, output, and public redaction entrypoints
 
 Run the full suite with:
 
