@@ -11,13 +11,13 @@ type Config struct {
 	UseTags           bool
 	UseFieldDetection bool
 	UseValueDetection bool
-	Detector          detection.Detector
+	Detector          *detection.Detector
 	Preservation      redactcore.Config
 }
 
 type Walker struct {
 	typed *TypedCopier
-	blob  *BlobBuilder
+	output *OutputBuilder
 }
 
 func New(cfg Config, cache *TypeCache) *Walker {
@@ -27,7 +27,7 @@ func New(cfg Config, cache *TypeCache) *Walker {
 	decider := NewDecider(cfg)
 	return &Walker{
 		typed: NewTypedCopier(cfg, decider, cache),
-		blob:  NewBlobBuilder(cfg, decider, cache),
+		output: NewOutputBuilder(cfg, decider, cache),
 	}
 }
 

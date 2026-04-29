@@ -12,7 +12,7 @@ func testDeciderConfig() Config {
 		UseTags:           true,
 		UseFieldDetection: true,
 		UseValueDetection: false,
-		Detector:          detection.NewCompiledDetector(detection.DefaultRules(), detection.PatternValueDetector{}, false),
+		Detector:          detection.NewDetector(detection.DefaultRules(), false),
 		Preservation:      redactcore.DefaultConfig(),
 	}
 }
@@ -40,7 +40,7 @@ func TestDeciderRespectsDetectionFlags(t *testing.T) {
 	cfg := testDeciderConfig()
 	cfg.UseFieldDetection = false
 	cfg.UseValueDetection = true
-	cfg.Detector = detection.NewCompiledDetector(nil, detection.PatternValueDetector{}, true)
+	cfg.Detector = detection.NewDetector(nil, true)
 	d := NewDecider(cfg)
 	dec, err := d.Decide("email", "", "greg@example.com")
 	if err != nil {

@@ -10,6 +10,14 @@ The repository now exposes two public packages only:
 
 Everything else lives under `internal/...`.
 
+## Stability
+
+This library should be treated as pre-`v1`.
+
+- the public API may still change
+- internal packages are not part of the compatibility contract
+- breaking changes may happen between releases while the design settles
+
 ## Public Packages
 
 ### `annon`
@@ -187,7 +195,7 @@ annon/
 
 The repository uses same-package tests only.
 
-- public integration tests live in `anonymise` and `redact`
+- public integration tests live in `annon` and `redact`
 - internal implementation tests live in the owning `internal/...` packages
 - benchmark coverage exists for detection, walking, and public anonymisation entrypoints
 

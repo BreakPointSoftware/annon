@@ -8,7 +8,7 @@ import (
 )
 
 func benchmarkWalker() *Walker {
-	return New(Config{UseTags: true, UseFieldDetection: true, UseValueDetection: true, Detector: detection.NewCompiledDetector(detection.DefaultRules(), detection.PatternValueDetector{}, true), Preservation: redactcore.DefaultConfig()}, nil)
+	return New(Config{UseTags: true, UseFieldDetection: true, UseValueDetection: true, Detector: detection.NewDetector(detection.DefaultRules(), true), Preservation: redactcore.DefaultConfig()}, nil)
 }
 
 func BenchmarkWalkerCopy(b *testing.B) {

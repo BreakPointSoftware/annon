@@ -18,14 +18,14 @@ func New(opts ...Option) (*Anonymiser, error) {
 			return nil, err
 		}
 	}
-	var detector *detection.CompiledDetector
+	var detector *detection.Detector
 	if cfg.UseFieldDetection || cfg.UseValueDetection {
 		rules := []detection.Rule(nil)
 		if cfg.UseFieldDetection {
 			rules = append(rules, detection.DefaultRules()...)
 			rules = append(rules, cfg.FieldRules...)
 		}
-		detector = detection.NewCompiledDetector(rules, detection.PatternValueDetector{}, cfg.UseValueDetection)
+		detector = detection.NewDetector(rules, cfg.UseValueDetection)
 	}
 	cache := walk.NewTypeCache()
 	return &Anonymiser{config: cfg, walker: walk.New(walk.Config{UseTags: cfg.UseTags, UseFieldDetection: cfg.UseFieldDetection, UseValueDetection: cfg.UseValueDetection, Detector: detector, Preservation: cfg.Preservation}, cache), cache: cache}, nil

@@ -13,7 +13,7 @@ type typedCustomer struct {
 }
 
 func testWalkerConfig() Config {
-	return Config{UseTags: true, UseFieldDetection: true, UseValueDetection: false, Detector: detection.NewCompiledDetector(detection.DefaultRules(), detection.PatternValueDetector{}, false), Preservation: redactcore.DefaultConfig()}
+	return Config{UseTags: true, UseFieldDetection: true, UseValueDetection: false, Detector: detection.NewDetector(detection.DefaultRules(), false), Preservation: redactcore.DefaultConfig()}
 }
 
 func TestCopyStruct(t *testing.T) {

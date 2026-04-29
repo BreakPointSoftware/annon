@@ -59,21 +59,19 @@ func (d *Decider) detect(fieldName string, value any) detection.Match {
 	if d.cfg.Detector == nil {
 		return detection.NoMatchResult()
 	}
+
 	if d.cfg.UseFieldDetection && d.cfg.UseValueDetection {
 		return d.cfg.Detector.Detect(fieldName, value)
 	}
+
 	if d.cfg.UseFieldDetection {
-		if detector, ok := d.cfg.Detector.(detection.FieldDetector); ok {
-			return detector.DetectField(fieldName)
-		}
-		return detection.NoMatchResult()
+		return d.cfg.Detector.DetectField(fieldName)
 	}
+
 	if d.cfg.UseValueDetection {
-		if detector, ok := d.cfg.Detector.(detection.ValueDetector); ok {
-			return detector.DetectValue(value)
-		}
-		return detection.NoMatchResult()
+		return d.cfg.Detector.DetectValue(value)
 	}
+
 	return detection.NoMatchResult()
 }
 
