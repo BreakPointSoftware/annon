@@ -1,9 +1,9 @@
 package redact
 
-import core "github.com/BreakPointSoftware/annon/internal/redactcore"
+import "github.com/BreakPointSoftware/annon/internal/redactcore"
 
 func New(opts ...Option) (*Redactor, error) {
-	cfg := core.DefaultConfig()
+	cfg := redactcore.DefaultConfig()
 	for _, opt := range opts {
 		if err := opt(&cfg); err != nil {
 			return nil, err

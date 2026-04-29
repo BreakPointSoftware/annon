@@ -1,7 +1,7 @@
 package annon
 
 import (
-	internaldetection "github.com/BreakPointSoftware/annon/internal/detection"
+	"github.com/BreakPointSoftware/annon/internal/detection"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
 )
 
@@ -12,42 +12,42 @@ type NameConfig = redactcore.NameConfig
 type PostcodeConfig = redactcore.PostcodeConfig
 type VehicleRegistrationConfig = redactcore.VehicleRegistrationConfig
 
-type FieldStrategy = internaldetection.Strategy
-type MatchType = internaldetection.MatchType
-type FieldRule = internaldetection.Rule
+type FieldStrategy = detection.Strategy
+type MatchType = detection.MatchType
+type FieldRule = detection.Rule
 
 const (
-	EmailStrategy               FieldStrategy = internaldetection.Email
-	PhoneStrategy               FieldStrategy = internaldetection.Phone
-	PostcodeStrategy            FieldStrategy = internaldetection.Postcode
-	NameStrategy                FieldStrategy = internaldetection.Name
-	FirstNameStrategy           FieldStrategy = internaldetection.FirstName
-	SurnameStrategy             FieldStrategy = internaldetection.Surname
-	VehicleRegistrationStrategy FieldStrategy = internaldetection.VehicleRegistration
-	RedactStrategy              FieldStrategy = internaldetection.Redact
+	EmailStrategy               FieldStrategy = detection.Email
+	PhoneStrategy               FieldStrategy = detection.Phone
+	PostcodeStrategy            FieldStrategy = detection.Postcode
+	NameStrategy                FieldStrategy = detection.Name
+	FirstNameStrategy           FieldStrategy = detection.FirstName
+	SurnameStrategy             FieldStrategy = detection.Surname
+	VehicleRegistrationStrategy FieldStrategy = detection.VehicleRegistration
+	RedactStrategy              FieldStrategy = detection.Redact
 
-	StrongMatchType   MatchType = internaldetection.Strong
-	FallbackMatchType MatchType = internaldetection.Fallback
-	ContainsMatchType MatchType = internaldetection.Contains
+	StrongMatchType   MatchType = detection.Strong
+	FallbackMatchType MatchType = detection.Fallback
+	ContainsMatchType MatchType = detection.Contains
 )
 
 func StrongRule(strategy FieldStrategy, fields ...string) FieldRule {
-	return internaldetection.StrongRule(internaldetection.Strategy(strategy), fields...)
+	return detection.StrongRule(detection.Strategy(strategy), fields...)
 }
 
 func FallbackRule(strategy FieldStrategy, fields ...string) FieldRule {
-	return internaldetection.FallbackRule(internaldetection.Strategy(strategy), fields...)
+	return detection.FallbackRule(detection.Strategy(strategy), fields...)
 }
 
 func ContainsRule(strategy FieldStrategy, fields []string, exclude []string) FieldRule {
-	return internaldetection.ContainsRule(internaldetection.Strategy(strategy), fields, exclude)
+	return detection.ContainsRule(detection.Strategy(strategy), fields, exclude)
 }
 
 type config struct {
 	UseTags           bool
 	UseFieldDetection bool
 	UseValueDetection bool
-	FieldRules        []internaldetection.Rule
+	FieldRules        []detection.Rule
 	Preservation      redactcore.Config
 }
 

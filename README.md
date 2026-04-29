@@ -10,6 +10,14 @@ The repository now exposes two public packages only:
 
 Everything else lives under `internal/...`.
 
+## Stability
+
+This library should be treated as pre-`v1`.
+
+- the public API may still change
+- internal packages are not part of the compatibility contract
+- breaking changes may happen between releases while the design settles
+
 ## Public Packages
 
 ### `annon`
@@ -42,9 +50,27 @@ jsonBlob, err := a.JSON(customer)
 
 ### `redact`
 
-Use `redact` for direct single-value redaction without structured walking.
+Use `redact` as the primary public package for defensive redaction.
 
 ```go
+safeValue := redact.Data(customer)
+safeJSON := redact.JSON(customer)
+safeYAML := redact.YAML(customer)
+
+safeJSONBytes := redact.JSONBytes(rawJSON)
+safeYAMLBytes := redact.YAMLBytes(rawYAML)
+```
+
+These APIs are intended to be defensive for logging and export use cases:
+
+- they do not return errors
+- they must not panic
+- JSON/YAML helpers always return valid fallback payloads on failure
+
+Use the direct string helpers when you already know the value type.
+
+```go
+safeString := redact.String("greg@example.com")
 safeEmail := redact.Email("greg@example.com")
 safePhone := redact.Phone("07700 900123")
 safePostcode := redact.Postcode("TN9 1XA")
@@ -167,29 +193,33 @@ annon/
 ├── *.go
 ├── redact/
 └── internal/
+    ├── copy/
+    ├── decision/
     ├── detection/
     ├── encode/
+    ├── output/
     ├── redactcore/
     ├── support/
     │   └── normalise/
-    └── walk/
 ```
 
 ### Internal responsibilities
 
+- `internal/copy`: typed deep-copy logic and struct metadata caching
+- `internal/decision`: tag parsing and anonymisation decision flow
 - `internal/detection`: field and value matching
 - `internal/encode`: JSON and YAML decode/encode helpers
+- `internal/output`: neutral output construction for JSON/YAML and raw blobs
 - `internal/redactcore`: concrete redaction implementations and shared config
 - `internal/support/normalise`: low-level field-name normalisation helpers
-- `internal/walk`: typed and blob traversal, tag handling, and metadata caching
 
 ## Testing
 
 The repository uses same-package tests only.
 
-- public integration tests live in `anonymise` and `redact`
+- public integration tests live in `annon` and `redact`
 - internal implementation tests live in the owning `internal/...` packages
-- benchmark coverage exists for detection, walking, and public anonymisation entrypoints
+- benchmark coverage exists for detection, copy, output, and public anonymisation entrypoints
 
 Run the full suite with:
 

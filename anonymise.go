@@ -1,14 +1,17 @@
 package annon
 
 import (
+	copyinternal "github.com/BreakPointSoftware/annon/internal/copy"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/detection"
-	"github.com/BreakPointSoftware/annon/internal/walk"
+	"github.com/BreakPointSoftware/annon/internal/output"
 )
 
 type Anonymiser struct {
-	config config
-	walker *walk.Walker
-	cache  *walk.TypeCache
+	config        config
+	copier        *copyinternal.Copier
+	outputBuilder *output.Builder
+	cache         *copyinternal.TypeCache
 }
 
 func New(opts ...Option) (*Anonymiser, error) {
@@ -18,17 +21,25 @@ func New(opts ...Option) (*Anonymiser, error) {
 			return nil, err
 		}
 	}
-	var detector *detection.CompiledDetector
+	var detector *detection.Detector
 	if cfg.UseFieldDetection || cfg.UseValueDetection {
 		rules := []detection.Rule(nil)
 		if cfg.UseFieldDetection {
 			rules = append(rules, detection.DefaultRules()...)
 			rules = append(rules, cfg.FieldRules...)
 		}
-		detector = detection.NewCompiledDetector(rules, detection.PatternValueDetector{}, cfg.UseValueDetection)
+		detector = detection.NewDetector(rules, cfg.UseValueDetection)
 	}
-	cache := walk.NewTypeCache()
-	return &Anonymiser{config: cfg, walker: walk.New(walk.Config{UseTags: cfg.UseTags, UseFieldDetection: cfg.UseFieldDetection, UseValueDetection: cfg.UseValueDetection, Detector: detector, Preservation: cfg.Preservation}, cache), cache: cache}, nil
+	decisionConfig := decision.Config{UseTags: cfg.UseTags, UseFieldDetection: cfg.UseFieldDetection, UseValueDetection: cfg.UseValueDetection, Detector: detector, Preservation: cfg.Preservation}
+	cache := copyinternal.NewTypeCache()
+	decider := decision.New(decisionConfig)
+
+	return &Anonymiser{
+		config:        cfg,
+		copier:        copyinternal.New(decisionConfig, decider, cache),
+		outputBuilder: output.New(decisionConfig, decider, cache),
+		cache:         cache,
+	}, nil
 }
 
 func Copy[T any](input T, opts ...Option) (T, error) {

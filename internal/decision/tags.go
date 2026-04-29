@@ -1,4 +1,4 @@
-package walk
+package decision
 
 import "strings"
 
@@ -12,6 +12,7 @@ type parsedTag struct {
 
 func parseTag(raw string) parsedTag {
 	tag := strings.TrimSpace(raw)
+
 	switch tag {
 	case "", "-":
 		return parsedTag{empty: true}

@@ -1,49 +1,61 @@
 package detection
 
-type Detector interface {
-	Detect(fieldName string, value any) Match
-}
-
-type FieldDetector interface {
-	DetectField(fieldName string) Match
-}
-
-type CompiledDetector struct {
+type Detector struct {
 	strong               map[string]Match
 	fallback             map[string]Match
 	contains             []compiledContainsRule
-	valueDetector        ValueDetector
 	enableValueDetection bool
 }
 
-func NewCompiledDetector(rules []Rule, valueDetector ValueDetector, enableValueDetection bool) *CompiledDetector {
-	d := &CompiledDetector{
+func NewDetector(rules []Rule, enableValueDetection bool) *Detector {
+	detector := &Detector{
 		strong:               map[string]Match{},
 		fallback:             map[string]Match{},
-		valueDetector:        valueDetector,
 		enableValueDetection: enableValueDetection,
 	}
+
 	for _, rule := range rules {
-		d.addRule(rule)
+		detector.addRule(rule)
 	}
-	return d
+
+	return detector
 }
 
-func (d *CompiledDetector) Detect(fieldName string, value any) Match {
-	if match := d.DetectField(fieldName); match.Found() {
+func (detector *Detector) Detect(fieldName string, value any) Match {
+	if match := detector.DetectField(fieldName); match.Found() {
 		return match
 	}
-	if d.enableValueDetection && d.valueDetector != nil {
-		if match := d.valueDetector.DetectValue(value); match.Found() {
+
+	if detector.enableValueDetection {
+		if match := detector.DetectValue(value); match.Found() {
 			return match
 		}
 	}
+
 	return NoMatchResult()
 }
 
-func (d *CompiledDetector) DetectValue(value any) Match {
-	if d.valueDetector == nil {
+func (detector *Detector) DetectValue(value any) Match {
+	stringValue, isString := value.(string)
+	if !isString {
 		return NoMatchResult()
 	}
-	return d.valueDetector.DetectValue(value)
+
+	if IsEmail(stringValue) {
+		return Match{Strategy: Email, Confidence: ValuePatternMatch, MatchedBy: "value:email"}
+	}
+
+	if IsUKPhoneNumber(stringValue) {
+		return Match{Strategy: Phone, Confidence: ValuePatternMatch, MatchedBy: "value:phone"}
+	}
+
+	if IsUKPostcode(stringValue) {
+		return Match{Strategy: Postcode, Confidence: ValuePatternMatch, MatchedBy: "value:postcode"}
+	}
+
+	if IsVehicleRegistration(stringValue) {
+		return Match{Strategy: VehicleRegistration, Confidence: ValuePatternMatch, MatchedBy: "value:vehicleRegistration"}
+	}
+
+	return NoMatchResult()
 }

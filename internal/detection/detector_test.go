@@ -2,9 +2,9 @@ package detection
 
 import "testing"
 
-func TestCompiledDetectorDetect(t *testing.T) {
-	d := NewCompiledDetector(DefaultRules(), PatternValueDetector{}, true)
-	if match := d.Detect("email", "not-an-email"); match.Strategy != Email {
+func TestDetectorDetect(t *testing.T) {
+	detector := NewDetector(DefaultRules(), true)
+	if match := detector.Detect("email", "not-an-email"); match.Strategy != Email {
 		t.Fatalf("unexpected field match: %+v", match)
 	}
 }
