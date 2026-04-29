@@ -1,4 +1,4 @@
-package walk
+package copy
 
 import (
 	"reflect"
@@ -12,7 +12,11 @@ type cacheExample struct {
 }
 
 func TestTypeCacheReusesCompiledMetadata(t *testing.T) {
-	cache := NewTypeCache(); typeOf := reflect.TypeOf(cacheExample{})
-	first := cache.StructFields(typeOf); second := cache.StructFields(typeOf)
-	if &first[0] != &second[0] { t.Fatal("expected reuse") }
+	cache := NewTypeCache()
+	typeOf := reflect.TypeOf(cacheExample{})
+	first := cache.StructFields(typeOf)
+	second := cache.StructFields(typeOf)
+	if &first[0] != &second[0] {
+		t.Fatal("expected reuse")
+	}
 }

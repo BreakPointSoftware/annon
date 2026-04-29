@@ -1,4 +1,4 @@
-package walk
+package copy
 
 import (
 	"reflect"
@@ -29,12 +29,15 @@ func (f FieldMeta) DetectionName(format string) string {
 			return f.YAMLName
 		}
 	}
+
 	if f.JSONName != "" && !f.IgnoreJSON {
 		return f.JSONName
 	}
+
 	if f.YAMLName != "" && !f.IgnoreYAML {
 		return f.YAMLName
 	}
+
 	return f.Name
 }
 
@@ -43,16 +46,20 @@ func (f FieldMeta) OutputName(format string) string {
 		if f.IgnoreYAML {
 			return ""
 		}
+
 		if f.YAMLName != "" {
 			return f.YAMLName
 		}
 	}
+
 	if f.IgnoreJSON {
 		return ""
 	}
+
 	if f.JSONName != "" {
 		return f.JSONName
 	}
+
 	return f.Name
 }
 
@@ -64,6 +71,7 @@ func (c *TypeCache) StructFields(t reflect.Type) []FieldMeta {
 	if cached, ok := c.fields.Load(t); ok {
 		return cached.([]FieldMeta)
 	}
+
 	fields := compileStructFields(t)
 	c.fields.Store(t, fields)
 	return fields
@@ -71,16 +79,28 @@ func (c *TypeCache) StructFields(t reflect.Type) []FieldMeta {
 
 func compileStructFields(t reflect.Type) []FieldMeta {
 	fields := make([]FieldMeta, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+
+	for index := 0; index < t.NumField(); index++ {
+		field := t.Field(index)
 		if field.PkgPath != "" {
 			continue
 		}
+
 		jsonName, ignoreJSON := parseSerialiseTag(field.Tag.Get("json"))
 		yamlName, ignoreYAML := parseSerialiseTag(field.Tag.Get("yaml"))
 		_ = detection.Normalise(field.Name)
-		fields = append(fields, FieldMeta{Index: field.Index, Name: field.Name, JSONName: jsonName, YAMLName: yamlName, AnonymiseTag: field.Tag.Get("anonymise"), IgnoreJSON: ignoreJSON, IgnoreYAML: ignoreYAML})
+
+		fields = append(fields, FieldMeta{
+			Index:        field.Index,
+			Name:         field.Name,
+			JSONName:     jsonName,
+			YAMLName:     yamlName,
+			AnonymiseTag: field.Tag.Get("anonymise"),
+			IgnoreJSON:   ignoreJSON,
+			IgnoreYAML:   ignoreYAML,
+		})
 	}
+
 	return fields
 }
 
@@ -88,15 +108,19 @@ func parseSerialiseTag(tag string) (string, bool) {
 	if tag == "-" {
 		return "", true
 	}
+
 	if tag == "" {
 		return "", false
 	}
+
 	parts := strings.Split(tag, ",")
 	if parts[0] == "-" {
 		return "", true
 	}
+
 	if parts[0] == "" {
 		return "", false
 	}
+
 	return parts[0], false
 }

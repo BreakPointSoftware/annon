@@ -175,21 +175,25 @@ annon/
 ├── *.go
 ├── redact/
 └── internal/
+    ├── copy/
+    ├── decision/
     ├── detection/
     ├── encode/
+    ├── output/
     ├── redactcore/
     ├── support/
     │   └── normalise/
-    └── walk/
 ```
 
 ### Internal responsibilities
 
+- `internal/copy`: typed deep-copy logic and struct metadata caching
+- `internal/decision`: tag parsing and anonymisation decision flow
 - `internal/detection`: field and value matching
 - `internal/encode`: JSON and YAML decode/encode helpers
+- `internal/output`: neutral output construction for JSON/YAML and raw blobs
 - `internal/redactcore`: concrete redaction implementations and shared config
 - `internal/support/normalise`: low-level field-name normalisation helpers
-- `internal/walk`: typed and blob traversal, tag handling, and metadata caching
 
 ## Testing
 
@@ -197,7 +201,7 @@ The repository uses same-package tests only.
 
 - public integration tests live in `annon` and `redact`
 - internal implementation tests live in the owning `internal/...` packages
-- benchmark coverage exists for detection, walking, and public anonymisation entrypoints
+- benchmark coverage exists for detection, copy, output, and public anonymisation entrypoints
 
 Run the full suite with:
 
