@@ -6,6 +6,7 @@ import (
 
 	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
+	"github.com/BreakPointSoftware/annon/internal/support/reflectx"
 	"github.com/BreakPointSoftware/annon/internal/walk"
 )
 
@@ -21,11 +22,12 @@ func New(config decision.Config, decider *decision.Decider, cache *walk.TypeCach
 	return &Builder{config: config, decider: decider, cache: cache}
 }
 
-func (b *Builder) OutputFromValue(input any, format string) (any, error) {
+func (b *Builder) OutputFromValue(input any, format Format) (any, error) {
 	if input == nil {
 		return nil, nil
 	}
-	return b.buildOutputFromReflect(reflect.ValueOf(input), format, "", "", true)
+
+	return b.buildOutputFromReflect(reflect.ValueOf(input), format.String(), "", "", true)
 }
 
 func (b *Builder) OutputFromNeutral(input any) (any, error) {
@@ -38,7 +40,7 @@ func (b *Builder) buildOutputFromReflect(inputValue reflect.Value, format, field
 	}
 
 	if allowDecision {
-		fieldDecision, err := b.decider.Decide(fieldName, tag, valueInterface(inputValue))
+		fieldDecision, err := b.decider.Decide(fieldName, tag, reflectx.Interface(inputValue))
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +58,7 @@ func (b *Builder) buildOutputFromReflect(inputValue reflect.Value, format, field
 			if err != nil {
 				return nil, err
 			}
-			return valueInterface(transformedValue), nil
+			return reflectx.Interface(transformedValue), nil
 		}
 	}
 
@@ -76,7 +78,7 @@ func (b *Builder) buildReflectOutput(inputValue reflect.Value, format, fieldName
 	case reflect.Slice, reflect.Array:
 		return b.buildOutputSlice(inputValue, format)
 	default:
-		return valueInterface(inputValue), nil
+		return reflectx.Interface(inputValue), nil
 	}
 }
 
@@ -209,7 +211,7 @@ func (b *Builder) applyOutputAction(inputValue reflect.Value, strategyName strin
 }
 
 func applyAction(inputValue reflect.Value, strategyName string, outputConfig decision.Config) (reflect.Value, error) {
-	result, err := redactcore.Apply(strategyName, valueInterface(inputValue), outputConfig.Preservation)
+	result, err := redactcore.Apply(strategyName, reflectx.Interface(inputValue), outputConfig.Preservation)
 	if err != nil {
 		return reflect.Value{}, err
 	}
@@ -230,14 +232,6 @@ func applyAction(inputValue reflect.Value, strategyName string, outputConfig dec
 	}
 	return inputValue, nil
 }
-
-func valueInterface(inputValue reflect.Value) any {
-	if !inputValue.IsValid() {
-		return nil
-	}
-	return inputValue.Interface()
-}
-
 func cloneNeutral(input any) any {
 	switch value := input.(type) {
 	case map[string]any:

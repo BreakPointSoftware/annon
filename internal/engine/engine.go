@@ -47,10 +47,12 @@ func (e *Engine) Data(input any) (result any) {
 	defer recoverToValue(input, &result)
 
 	if stringInput, isString := input.(string); isString {
+		// Strings can be redacted directly without building the typed walk path.
 		return redactString(stringInput, e.config)
 	}
 
 	if requiresSafeFallback(input) {
+		// Unsupported top-level values should never leak through unchanged.
 		return fallbackValue(input)
 	}
 
@@ -65,7 +67,8 @@ func (e *Engine) Data(input any) (result any) {
 func (e *Engine) JSON(input any) (result []byte) {
 	defer recoverToJSONFallback(&result)
 
-	neutralOutput, err := e.outputBuilder.OutputFromValue(input, "json")
+	// Build neutral output first so encoding can always work against a simple shape.
+	neutralOutput, err := e.outputBuilder.OutputFromValue(input, output.JSON)
 	if err != nil {
 		return cloneJSONFallback()
 	}
@@ -81,7 +84,8 @@ func (e *Engine) JSON(input any) (result []byte) {
 func (e *Engine) YAML(input any) (result []byte) {
 	defer recoverToYAMLFallback(&result)
 
-	neutralOutput, err := e.outputBuilder.OutputFromValue(input, "yaml")
+	// Build neutral output first so encoding can always work against a simple shape.
+	neutralOutput, err := e.outputBuilder.OutputFromValue(input, output.YAML)
 	if err != nil {
 		return cloneYAMLFallback()
 	}
