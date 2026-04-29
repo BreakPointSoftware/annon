@@ -1,64 +1,19 @@
 package redact
 
-import annon "github.com/BreakPointSoftware/annon"
-
-var (
-	jsonFallback = []byte(`{"redaction_error":true}`)
-	yamlFallback = []byte("redaction_error: true\n")
-)
+import "github.com/BreakPointSoftware/annon/internal/engine"
 
 func JSON(input any) []byte {
-	defer func() {
-		if recover() != nil {
-		}
-	}()
-
-	outputBytes, err := annon.JSON(input)
-	if err != nil {
-		return append([]byte(nil), jsonFallback...)
-	}
-
-	return outputBytes
+	return engine.New(engine.DefaultConfig()).JSON(input)
 }
 
 func YAML(input any) []byte {
-	defer func() {
-		if recover() != nil {
-		}
-	}()
-
-	outputBytes, err := annon.YAML(input)
-	if err != nil {
-		return append([]byte(nil), yamlFallback...)
-	}
-
-	return outputBytes
+	return engine.New(engine.DefaultConfig()).YAML(input)
 }
 
 func JSONBytes(input []byte) []byte {
-	defer func() {
-		if recover() != nil {
-		}
-	}()
-
-	outputBytes, err := annon.FromJSON(input)
-	if err != nil {
-		return append([]byte(nil), jsonFallback...)
-	}
-
-	return outputBytes
+	return engine.New(engine.DefaultConfig()).JSONBytes(input)
 }
 
 func YAMLBytes(input []byte) []byte {
-	defer func() {
-		if recover() != nil {
-		}
-	}()
-
-	outputBytes, err := annon.FromYAML(input)
-	if err != nil {
-		return append([]byte(nil), yamlFallback...)
-	}
-
-	return outputBytes
+	return engine.New(engine.DefaultConfig()).YAMLBytes(input)
 }
