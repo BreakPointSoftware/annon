@@ -50,9 +50,27 @@ jsonBlob, err := a.JSON(customer)
 
 ### `redact`
 
-Use `redact` for direct single-value redaction without structured walking.
+Use `redact` as the primary public package for defensive redaction.
 
 ```go
+safeValue := redact.Data(customer)
+safeJSON := redact.JSON(customer)
+safeYAML := redact.YAML(customer)
+
+safeJSONBytes := redact.JSONBytes(rawJSON)
+safeYAMLBytes := redact.YAMLBytes(rawYAML)
+```
+
+These APIs are intended to be defensive for logging and export use cases:
+
+- they do not return errors
+- they must not panic
+- JSON/YAML helpers always return valid fallback payloads on failure
+
+Use the direct string helpers when you already know the value type.
+
+```go
+safeString := redact.String("greg@example.com")
 safeEmail := redact.Email("greg@example.com")
 safePhone := redact.Phone("07700 900123")
 safePostcode := redact.Postcode("TN9 1XA")
