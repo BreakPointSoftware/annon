@@ -50,6 +50,10 @@ func (e *Engine) Data(input any) (result any) {
 		return redactString(stringInput, e.config)
 	}
 
+	if requiresSafeFallback(input) {
+		return fallbackValue(input)
+	}
+
 	redactedValue, err := e.copier.Copy(input)
 	if err != nil {
 		return fallbackValue(input)
