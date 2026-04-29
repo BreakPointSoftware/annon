@@ -3,16 +3,16 @@ package copy
 import (
 	"reflect"
 
-	decisionpkg "github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 )
 
 type Copier struct {
-	config  decisionpkg.Config
-	decider *decisionpkg.Decider
+	config  decision.Config
+	decider *decision.Decider
 	cache   *TypeCache
 }
 
-func New(config decisionpkg.Config, decider *decisionpkg.Decider, cache *TypeCache) *Copier {
+func New(config decision.Config, decider *decision.Decider, cache *TypeCache) *Copier {
 	return &Copier{config: config, decider: decider, cache: cache}
 }
 

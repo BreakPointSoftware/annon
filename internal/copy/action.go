@@ -3,11 +3,11 @@ package copy
 import (
 	"reflect"
 
-	decisionpkg "github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
 )
 
-func applyAction(inputValue reflect.Value, strategyName string, copyConfig decisionpkg.Config) (reflect.Value, error) {
+func applyAction(inputValue reflect.Value, strategyName string, copyConfig decision.Config) (reflect.Value, error) {
 	result, err := redactcore.Apply(strategyName, valueInterface(inputValue), copyConfig.Preservation)
 	if err != nil {
 		return reflect.Value{}, err

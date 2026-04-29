@@ -1,13 +1,13 @@
 package redact
 
-import core "github.com/BreakPointSoftware/annon/internal/redactcore"
+import "github.com/BreakPointSoftware/annon/internal/redactcore"
 
-type Config = core.Config
-type EmailConfig = core.EmailConfig
-type PhoneConfig = core.PhoneConfig
-type NameConfig = core.NameConfig
-type PostcodeConfig = core.PostcodeConfig
-type VehicleRegistrationConfig = core.VehicleRegistrationConfig
+type Config = redactcore.Config
+type EmailConfig = redactcore.EmailConfig
+type PhoneConfig = redactcore.PhoneConfig
+type NameConfig = redactcore.NameConfig
+type PostcodeConfig = redactcore.PostcodeConfig
+type VehicleRegistrationConfig = redactcore.VehicleRegistrationConfig
 
 type Option func(*Config) error
 

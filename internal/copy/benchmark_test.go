@@ -3,14 +3,14 @@ package copy
 import (
 	"testing"
 
-	decisionpkg "github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/detection"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
 )
 
 func benchmarkCopier() *Copier {
-	config := decisionpkg.Config{UseTags: true, UseFieldDetection: true, UseValueDetection: true, Detector: detection.NewDetector(detection.DefaultRules(), true), Preservation: redactcore.DefaultConfig()}
-	return New(config, decisionpkg.New(config), nil)
+	config := decision.Config{UseTags: true, UseFieldDetection: true, UseValueDetection: true, Detector: detection.NewDetector(detection.DefaultRules(), true), Preservation: redactcore.DefaultConfig()}
+	return New(config, decision.New(config), nil)
 }
 
 func BenchmarkCopierCopy(b *testing.B) {

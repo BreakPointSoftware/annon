@@ -3,7 +3,7 @@ package copy
 import (
 	"testing"
 
-	decisionpkg "github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/detection"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
 )
@@ -13,13 +13,13 @@ type typedCustomer struct {
 	Secret string `anonymise:"remove"`
 }
 
-func testCopyConfig() decisionpkg.Config {
-	return decisionpkg.Config{UseTags: true, UseFieldDetection: true, UseValueDetection: false, Detector: detection.NewDetector(detection.DefaultRules(), false), Preservation: redactcore.DefaultConfig()}
+func testCopyConfig() decision.Config {
+	return decision.Config{UseTags: true, UseFieldDetection: true, UseValueDetection: false, Detector: detection.NewDetector(detection.DefaultRules(), false), Preservation: redactcore.DefaultConfig()}
 }
 
 func TestCopyStruct(t *testing.T) {
 	cache := NewTypeCache()
-	decider := decisionpkg.New(testCopyConfig())
+	decider := decision.New(testCopyConfig())
 	copier := New(testCopyConfig(), decider, cache)
 	resultAny, err := copier.Copy(typedCustomer{Email: "greg@example.com", Secret: "secret"})
 	if err != nil {

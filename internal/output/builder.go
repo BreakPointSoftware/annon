@@ -5,19 +5,19 @@ import (
 	"reflect"
 
 	copyinternal "github.com/BreakPointSoftware/annon/internal/copy"
-	decisionpkg "github.com/BreakPointSoftware/annon/internal/decision"
+	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
 )
 
 var omittedValue = &struct{}{}
 
 type Builder struct {
-	config  decisionpkg.Config
-	decider *decisionpkg.Decider
+	config  decision.Config
+	decider *decision.Decider
 	cache   *copyinternal.TypeCache
 }
 
-func New(config decisionpkg.Config, decider *decisionpkg.Decider, cache *copyinternal.TypeCache) *Builder {
+func New(config decision.Config, decider *decision.Decider, cache *copyinternal.TypeCache) *Builder {
 	return &Builder{config: config, decider: decider, cache: cache}
 }
 
@@ -208,7 +208,7 @@ func (b *Builder) applyOutputAction(inputValue reflect.Value, strategyName strin
 	return applyAction(inputValue, strategyName, b.config)
 }
 
-func applyAction(inputValue reflect.Value, strategyName string, outputConfig decisionpkg.Config) (reflect.Value, error) {
+func applyAction(inputValue reflect.Value, strategyName string, outputConfig decision.Config) (reflect.Value, error) {
 	result, err := redactcore.Apply(strategyName, valueInterface(inputValue), outputConfig.Preservation)
 	if err != nil {
 		return reflect.Value{}, err

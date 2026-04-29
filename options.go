@@ -1,6 +1,6 @@
 package annon
 
-import internaldetection "github.com/BreakPointSoftware/annon/internal/detection"
+import "github.com/BreakPointSoftware/annon/internal/detection"
 
 type Option func(*config) error
 
@@ -23,7 +23,7 @@ func WithDefaultFieldDetection() Option {
 func WithFieldRules(rules ...FieldRule) Option {
 	return func(cfg *config) error {
 		for _, rule := range rules {
-			cfg.FieldRules = append(cfg.FieldRules, internaldetection.Rule(rule))
+			cfg.FieldRules = append(cfg.FieldRules, detection.Rule(rule))
 		}
 		cfg.UseFieldDetection = true
 		return nil
