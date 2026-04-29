@@ -27,6 +27,7 @@ func (b *Builder) OutputFromValue(input any, format Format) (any, error) {
 		return nil, nil
 	}
 
+	// Build output from typed input so the encoder always sees a neutral shape.
 	return b.buildOutputFromReflect(reflect.ValueOf(input), format.String(), "", "", true)
 }
 
@@ -40,6 +41,7 @@ func (b *Builder) buildOutputFromReflect(inputValue reflect.Value, format, field
 	}
 
 	if allowDecision {
+		// Apply tag and detector decisions before traversing child values.
 		fieldDecision, err := b.decider.Decide(fieldName, tag, reflectx.Interface(inputValue))
 		if err != nil {
 			return nil, err
@@ -98,6 +100,7 @@ func (b *Builder) buildOutputPointer(inputValue reflect.Value, format, fieldName
 
 func (b *Builder) buildOutputStructMap(structValue reflect.Value, format string) (any, error) {
 	outputMap := map[string]any{}
+
 	for _, fieldMeta := range b.cache.StructFields(structValue.Type()) {
 		outputFieldName := fieldMeta.OutputName(format)
 		if outputFieldName == "" {
@@ -110,8 +113,10 @@ func (b *Builder) buildOutputStructMap(structValue reflect.Value, format string)
 		if outputValue == omittedValue {
 			continue
 		}
+
 		outputMap[outputFieldName] = outputValue
 	}
+
 	return outputMap, nil
 }
 
@@ -121,6 +126,7 @@ func (b *Builder) buildOutputMap(mapValue reflect.Value, format string) (any, er
 	}
 	outputMap := map[string]any{}
 	mapIterator := mapValue.MapRange()
+
 	for mapIterator.Next() {
 		outputFieldName := fmt.Sprint(mapIterator.Key().Interface())
 		outputValue, err := b.buildOutputFromReflect(mapIterator.Value(), format, outputFieldName, "", true)
@@ -130,13 +136,16 @@ func (b *Builder) buildOutputMap(mapValue reflect.Value, format string) (any, er
 		if outputValue == omittedValue {
 			continue
 		}
+
 		outputMap[outputFieldName] = outputValue
 	}
+
 	return outputMap, nil
 }
 
 func (b *Builder) buildOutputSlice(sliceValue reflect.Value, format string) (any, error) {
 	outputValues := make([]any, 0, sliceValue.Len())
+
 	for index := 0; index < sliceValue.Len(); index++ {
 		outputValue, err := b.buildOutputFromReflect(sliceValue.Index(index), format, "", "", true)
 		if err != nil {
@@ -144,6 +153,7 @@ func (b *Builder) buildOutputSlice(sliceValue reflect.Value, format string) (any
 		}
 		outputValues = append(outputValues, outputValue)
 	}
+
 	return outputValues, nil
 }
 
@@ -156,15 +166,19 @@ func (b *Builder) buildOutputFromNeutralValue(input any, fieldName, tag string) 
 	if err != nil {
 		return nil, err
 	}
+
 	if fieldDecision.Skip {
 		return cloneNeutral(input), nil
 	}
+
 	if fieldDecision.Remove {
 		return omittedValue, nil
 	}
+
 	if fieldDecision.StrategyName != "" {
 		return redactcore.Apply(fieldDecision.StrategyName, input, b.config.Preservation)
 	}
+
 	return b.buildNeutralOutput(input)
 }
 
@@ -181,6 +195,7 @@ func (b *Builder) buildNeutralOutput(input any) (any, error) {
 
 func (b *Builder) buildNeutralOutputMap(neutralMap map[string]any) (any, error) {
 	outputMap := make(map[string]any, len(neutralMap))
+
 	for fieldName, fieldValue := range neutralMap {
 		resolvedValue, err := b.buildOutputFromNeutralValue(fieldValue, fieldName, "")
 		if err != nil {
@@ -189,13 +204,16 @@ func (b *Builder) buildNeutralOutputMap(neutralMap map[string]any) (any, error) 
 		if resolvedValue == omittedValue {
 			continue
 		}
+
 		outputMap[fieldName] = resolvedValue
 	}
+
 	return outputMap, nil
 }
 
 func (b *Builder) buildNeutralOutputSlice(neutralSlice []any) (any, error) {
 	outputValues := make([]any, 0, len(neutralSlice))
+
 	for _, elementValue := range neutralSlice {
 		resolvedValue, err := b.buildOutputFromNeutralValue(elementValue, "", "")
 		if err != nil {
@@ -203,6 +221,7 @@ func (b *Builder) buildNeutralOutputSlice(neutralSlice []any) (any, error) {
 		}
 		outputValues = append(outputValues, resolvedValue)
 	}
+
 	return outputValues, nil
 }
 
@@ -215,9 +234,11 @@ func applyAction(inputValue reflect.Value, strategyName string, outputConfig dec
 	if err != nil {
 		return reflect.Value{}, err
 	}
+
 	if result == nil {
 		return reflect.Zero(inputValue.Type()), nil
 	}
+
 	resultValue := reflect.ValueOf(result)
 	if resultValue.Type().AssignableTo(inputValue.Type()) {
 		return resultValue, nil
@@ -230,21 +251,27 @@ func applyAction(inputValue reflect.Value, strategyName string, outputConfig dec
 		outputValue.Set(resultValue)
 		return outputValue, nil
 	}
+
 	return inputValue, nil
 }
+
 func cloneNeutral(input any) any {
 	switch value := input.(type) {
 	case map[string]any:
 		outputMap := make(map[string]any, len(value))
+
 		for key, item := range value {
 			outputMap[key] = cloneNeutral(item)
 		}
+
 		return outputMap
 	case []any:
 		outputValues := make([]any, len(value))
+
 		for index, item := range value {
 			outputValues[index] = cloneNeutral(item)
 		}
+
 		return outputValues
 	default:
 		return value

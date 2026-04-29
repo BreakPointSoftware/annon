@@ -13,20 +13,21 @@ type typedCustomer struct {
 	Secret string `anonymise:"remove"`
 }
 
-func testCopyConfig() decision.Config {
+func testWalkConfig() decision.Config {
 	return decision.Config{UseTags: true, UseFieldDetection: true, UseValueDetection: false, Detector: detection.NewDetector(detection.DefaultRules(), false), Preservation: redactcore.DefaultConfig()}
 }
 
-func TestCopyStruct(t *testing.T) {
+func TestWalkStruct(t *testing.T) {
 	cache := NewTypeCache()
-	decider := decision.New(testCopyConfig())
-	copier := New(testCopyConfig(), decider, cache)
-	resultAny, err := copier.Copy(typedCustomer{Email: "greg@example.com", Secret: "secret"})
+	decider := decision.New(testWalkConfig())
+	walker := New(testWalkConfig(), decider, cache)
+	resultAny, err := walker.Copy(typedCustomer{Email: "greg@example.com", Secret: "secret"})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	result := resultAny.(typedCustomer)
 	if result.Email != "g***@example.com" || result.Secret != "" {
-		t.Fatalf("unexpected copy result: %+v", result)
+		t.Fatalf("unexpected walk result: %+v", result)
 	}
 }
