@@ -1,16 +1,16 @@
 package engine
 
 import (
-	copyinternal "github.com/BreakPointSoftware/annon/internal/copy"
 	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/detection"
 	"github.com/BreakPointSoftware/annon/internal/encode"
 	"github.com/BreakPointSoftware/annon/internal/output"
+	"github.com/BreakPointSoftware/annon/internal/walk"
 )
 
 type Engine struct {
 	config        Config
-	copier        *copyinternal.Copier
+	copier        *walk.Copier
 	outputBuilder *output.Builder
 }
 
@@ -33,12 +33,12 @@ func New(config Config) *Engine {
 		Preservation:      config.Preservation,
 	}
 
-	cache := copyinternal.NewTypeCache()
+	cache := walk.NewTypeCache()
 	decider := decision.New(decisionConfig)
 
 	return &Engine{
 		config:        config,
-		copier:        copyinternal.New(decisionConfig, decider, cache),
+		copier:        walk.New(decisionConfig, decider, cache),
 		outputBuilder: output.New(decisionConfig, decider, cache),
 	}
 }

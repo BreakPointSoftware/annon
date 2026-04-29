@@ -155,10 +155,10 @@ Value detection is opt-in internally and checks strings for:
 annon/
 ├── redact/
 └── internal/
-    ├── copy/
-    ├── decision/
-    ├── detection/
-    ├── encode/
+	    ├── walk/
+	    ├── decision/
+	    ├── detection/
+	    ├── encode/
     ├── engine/
     ├── output/
     ├── redactcore/
@@ -168,7 +168,7 @@ annon/
 
 ### Internal responsibilities
 
-- `internal/copy`: typed deep-copy logic and struct metadata caching
+- `internal/walk`: typed traversal, deep-copy logic, and struct metadata caching
 - `internal/decision`: tag parsing and redaction decision flow
 - `internal/detection`: field and value matching
 - `internal/encode`: JSON and YAML decode/encode helpers
@@ -183,7 +183,7 @@ The repository uses same-package tests only.
 
 - public integration tests live in `redact`
 - internal implementation tests live in the owning `internal/...` packages
-- benchmark coverage exists for detection, copy, output, and public redaction entrypoints
+- benchmark coverage exists for detection, walk, output, and public redaction entrypoints
 
 Run the full suite with:
 

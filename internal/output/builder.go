@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	copyinternal "github.com/BreakPointSoftware/annon/internal/copy"
 	"github.com/BreakPointSoftware/annon/internal/decision"
 	"github.com/BreakPointSoftware/annon/internal/redactcore"
+	"github.com/BreakPointSoftware/annon/internal/walk"
 )
 
 var omittedValue = &struct{}{}
@@ -14,10 +14,10 @@ var omittedValue = &struct{}{}
 type Builder struct {
 	config  decision.Config
 	decider *decision.Decider
-	cache   *copyinternal.TypeCache
+	cache   *walk.TypeCache
 }
 
-func New(config decision.Config, decider *decision.Decider, cache *copyinternal.TypeCache) *Builder {
+func New(config decision.Config, decider *decision.Decider, cache *walk.TypeCache) *Builder {
 	return &Builder{config: config, decider: decider, cache: cache}
 }
 
