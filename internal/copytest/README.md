@@ -51,6 +51,28 @@ redaction engine into this spike. The flags capture:
 - where runtime state was zeroed
 - where unsupported kinds were encountered
 
+## What the tests are proving
+
+The comparison tests are intended to make the trade-offs explicit.
+
+- baseline:
+  - preserves simple exported data
+  - rejects recursive cycles rather than trying to preserve them
+  - does not preserve shared graph structure
+  - may lose unexported value semantics because it rebuilds structs field by field
+- hybrid:
+  - preserves unexported value fields through value-first struct copying
+  - detaches copied references from the original object graph
+  - preserves shared references and cycles inside the copied graph
+  - zeroes or shares runtime-state fields according to explicit policy
+  - emits flags that explain notable copy decisions
+
+The tests therefore check three things together wherever relevant:
+
+1. the copied graph is detached from the original
+2. the copied graph preserves the intended internal shape
+3. the copied graph still carries the same meaningful stored values unless policy says otherwise
+
 ## What is intentionally not solved yet
 
 - no production integration with the public `redact` API
