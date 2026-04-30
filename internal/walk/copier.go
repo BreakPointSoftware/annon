@@ -7,13 +7,11 @@ import (
 	"github.com/BreakPointSoftware/annon/internal/support/reflectx"
 )
 
-type Copier struct {
+type Walker struct {
 	config  decision.Config
 	decider *decision.Decider
 	cache   *TypeCache
 }
-
-type Walker = Copier
 
 func New(config decision.Config, decider *decision.Decider, cache *TypeCache) *Walker {
 	return &Walker{config: config, decider: decider, cache: cache}
