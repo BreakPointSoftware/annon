@@ -63,6 +63,20 @@ r, err := redact.New(
 safeEmail := r.Email("greg@example.com")
 ```
 
+## Examples
+
+Runnable examples live under `examples/`.
+
+Tracer-bullet examples available now:
+
+```bash
+go run ./examples/example-data
+go run ./examples/example-presentation
+```
+
+- `example-data` shows a simple before/after structured redaction flow using `redact.Data`
+- `example-presentation` walks through a small terminal presentation showing structured redaction, JSON output, malformed JSON fallback, and direct string helpers
+
 ## Public Configuration
 
 Preservation configuration is public through the `redact` package.
