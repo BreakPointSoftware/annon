@@ -1,4 +1,4 @@
-package hybrid
+package hybridopt
 
 import (
 	"reflect"
@@ -19,9 +19,9 @@ type fieldPlan struct {
 }
 
 type repairPlan struct {
-	fields         []fieldPlan
-	hasRepairWork  bool
-	hasFieldFlags  bool
+	fields        []fieldPlan
+	hasRepairWork bool
+	hasFieldFlags bool
 }
 
 type planCache struct {

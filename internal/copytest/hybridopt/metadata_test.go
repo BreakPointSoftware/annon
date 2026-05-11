@@ -1,4 +1,4 @@
-package hybrid
+package hybridopt
 
 import (
 	"reflect"

@@ -2,6 +2,26 @@
 
 This internal spike compares two object copy/redaction traversal strategies.
 
+## Variants in this spike
+
+The spike now keeps three explicit variants available at the same time.
+
+- `baseline`
+  - simple recursive reflection-based copy
+  - exported-field oriented
+  - rejects pointer cycles
+- `hybrid`
+  - value-copy-first semantic reference implementation
+  - preserves unexported value fields
+  - repairs exported references
+  - preserves shared graph shape and cycles
+- `hybridopt`
+  - optimisation target for the hybrid semantics
+  - currently adds cached repair-plan metadata on top of the semantic hybrid implementation
+
+The intent is that `hybrid` remains the semantic reference implementation while `hybridopt` absorbs
+further optimisation work.
+
 ## Benchmark history
 
 Benchmark results for the optimisation phases are stored under:
