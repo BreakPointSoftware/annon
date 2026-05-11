@@ -2,6 +2,19 @@
 
 This internal spike compares two object copy/redaction traversal strategies.
 
+## Benchmark history
+
+Benchmark results for the optimisation phases are stored under:
+
+- `docs/benchmarks/`
+
+Each optimisation step records:
+
+- the commit and branch
+- the benchmark command
+- the raw output
+- a short interpretation of what changed
+
 ## Why hybrid copy exists
 
 The existing simple traversal walks values recursively and rebuilds structures one field at a time.

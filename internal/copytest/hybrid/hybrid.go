@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
-
-	"github.com/BreakPointSoftware/annon/internal/detection"
 )
 
 type FlagReason string
@@ -56,11 +54,10 @@ type visitKey struct {
 type hybridWalker struct {
 	visited  map[visitKey]reflect.Value
 	flags    []FieldFlag
-	detector *detection.Detector
 }
 
 func Copy[T any](input T) (HybridCopyResult[T], error) {
-	copyWalker := &hybridWalker{visited: map[visitKey]reflect.Value{}, detector: detection.NewDetector(detection.DefaultRules(), false)}
+	copyWalker := &hybridWalker{visited: map[visitKey]reflect.Value{}}
 	inputValue := reflect.ValueOf(input)
 	copiedValue, err := copyWalker.copyValue(inputValue, "")
 	if err != nil {
@@ -134,34 +131,38 @@ func (w *hybridWalker) copyPointer(inputValue reflect.Value, path string) (refle
 func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (reflect.Value, error) {
 	outputStruct := reflect.New(structValue.Type()).Elem()
 	outputStruct.Set(structValue)
+	repairPlan := globalPlanCache.PlanFor(structValue.Type())
 
-	for fieldIndex := 0; fieldIndex < structValue.NumField(); fieldIndex++ {
-		structField := structValue.Type().Field(fieldIndex)
-		fieldValue := structValue.Field(fieldIndex)
-		fieldPath := joinPath(path, structField.Name)
+	if !repairPlan.hasRepairWork && !repairPlan.hasFieldFlags {
+		return outputStruct, nil
+	}
 
-		if match := w.detector.DetectField(structField.Name); match.Found() {
-			w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: structField.Type, Kind: fieldValue.Kind(), Reason: SensitiveFieldName, Action: ActionSkipped})
+	for _, plannedField := range repairPlan.fields {
+		fieldValue := structValue.Field(plannedField.index)
+		fieldPath := joinPath(path, plannedField.name)
+
+		if plannedField.sensitive {
+			w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: SensitiveFieldName, Action: ActionSkipped})
 		}
 
-		if shouldZeroRuntimeState(structField.Type, fieldValue.Kind()) {
-			if outputStruct.Field(fieldIndex).CanSet() {
-				outputStruct.Field(fieldIndex).Set(reflect.Zero(structField.Type))
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: structField.Type, Kind: fieldValue.Kind(), Reason: RuntimeStateZeroed, Action: ActionZeroed})
+		if plannedField.runtimeState {
+			if outputStruct.Field(plannedField.index).CanSet() {
+				outputStruct.Field(plannedField.index).Set(reflect.Zero(plannedField.typ))
+				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionZeroed})
 			} else {
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: structField.Type, Kind: fieldValue.Kind(), Reason: RuntimeStateZeroed, Action: ActionShared})
+				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionShared})
 			}
 			continue
 		}
 
-		if structField.PkgPath != "" {
-			if isReferenceKind(fieldValue.Kind()) {
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: structField.Type, Kind: fieldValue.Kind(), Reason: UnexportedReferenceShared, Action: ActionShared})
+		if !plannedField.exported {
+			if plannedField.reference {
+				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: UnexportedReferenceShared, Action: ActionShared})
 			}
 			continue
 		}
 
-		if !isReferenceKind(fieldValue.Kind()) {
+		if !plannedField.reference {
 			continue
 		}
 
@@ -169,8 +170,8 @@ func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (refle
 		if err != nil {
 			return reflect.Value{}, err
 		}
-		outputStruct.Field(fieldIndex).Set(copiedValue)
-		w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: structField.Type, Kind: fieldValue.Kind(), Reason: ExportedReferenceDeepCopied, Action: ActionDeepCopied})
+		outputStruct.Field(plannedField.index).Set(copiedValue)
+		w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: ExportedReferenceDeepCopied, Action: ActionDeepCopied})
 	}
 
 	return outputStruct, nil
