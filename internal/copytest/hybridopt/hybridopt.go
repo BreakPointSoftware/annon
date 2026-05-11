@@ -133,7 +133,10 @@ func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (refle
 	outputStruct.Set(structValue)
 	repairPlan := globalPlanCache.PlanFor(structValue.Type())
 
-	if !repairPlan.hasRepairWork && !repairPlan.hasFieldFlags {
+	// If the struct has no mutable references or runtime-state fields to repair,
+	// return the value copy immediately and only emit lightweight metadata flags.
+	if !repairPlan.hasRepairWork {
+		w.recordFieldFlags(repairPlan, path)
 		return outputStruct, nil
 	}
 
@@ -175,6 +178,32 @@ func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (refle
 	}
 
 	return outputStruct, nil
+}
+
+func (w *hybridWalker) recordFieldFlags(repairPlan *repairPlan, path string) {
+	for _, plannedField := range repairPlan.fields {
+		fieldPath := joinPath(path, plannedField.name)
+
+		if plannedField.sensitive {
+			w.flags = append(w.flags, FieldFlag{
+				Path:   fieldPath,
+				Type:   plannedField.typ,
+				Kind:   plannedField.kind,
+				Reason: SensitiveFieldName,
+				Action: ActionSkipped,
+			})
+		}
+
+		if !plannedField.exported && plannedField.reference {
+			w.flags = append(w.flags, FieldFlag{
+				Path:   fieldPath,
+				Type:   plannedField.typ,
+				Kind:   plannedField.kind,
+				Reason: UnexportedReferenceShared,
+				Action: ActionShared,
+			})
+		}
+	}
 }
 
 func (w *hybridWalker) copyMap(mapValue reflect.Value, path string) (reflect.Value, error) {

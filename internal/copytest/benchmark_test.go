@@ -200,3 +200,123 @@ func BenchmarkHybridOptimisedMixedDomainObject(b *testing.B) {
 		_, _ = hybridopt.Copy(input)
 	}
 }
+
+func BenchmarkBaselineSmallStructBatch100(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = baseline.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridSmallStructBatch100(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybrid.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedSmallStructBatch100(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.Copy(input)
+		}
+	}
+}
+
+func BenchmarkBaselineLargeStructBatch100(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = baseline.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridLargeStructBatch100(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybrid.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedLargeStructBatch100(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.Copy(input)
+		}
+	}
+}
+
+func BenchmarkBaselineValueOnlyBatch1000(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			_, _ = baseline.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridValueOnlyBatch1000(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			_, _ = hybrid.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedValueOnlyBatch1000(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			_, _ = hybridopt.Copy(input)
+		}
+	}
+}
+
+func BenchmarkBaselineMixedDomainBatch100(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = baseline.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridMixedDomainBatch100(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybrid.Copy(input)
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedMixedDomainBatch100(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.Copy(input)
+		}
+	}
+}

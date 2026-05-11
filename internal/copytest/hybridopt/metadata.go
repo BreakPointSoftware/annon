@@ -21,7 +21,6 @@ type fieldPlan struct {
 type repairPlan struct {
 	fields        []fieldPlan
 	hasRepairWork bool
-	hasFieldFlags bool
 }
 
 type planCache struct {
@@ -67,9 +66,6 @@ func compileRepairPlan(typ reflect.Type) *repairPlan {
 			compiledPlan.hasRepairWork = true
 		}
 
-		if sensitive || runtimeState || reference {
-			compiledPlan.hasFieldFlags = true
-		}
 	}
 
 	return compiledPlan

@@ -12,8 +12,8 @@ func TestCompileRepairPlanForValueOnlyStruct(t *testing.T) {
 	if plan.hasRepairWork {
 		t.Fatalf("expected no repair work for value-only struct")
 	}
-	if !plan.hasFieldFlags {
-		t.Fatalf("expected field flags due to sensitive field-name detection")
+	if len(plan.fields) == 0 {
+		t.Fatal("expected field metadata in repair plan")
 	}
 }
 
