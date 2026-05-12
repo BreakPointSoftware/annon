@@ -111,9 +111,10 @@ Every analysis file must include:
 2. the previous run number explicitly
 3. a short summary
 4. grouped benchmark tables
-5. delta formatting
-6. commentary
-7. conclusion
+5. a direct current-vs-previous comparison table where helpful
+6. delta formatting
+7. commentary
+8. conclusion
 
 ### Required sections
 
@@ -129,6 +130,13 @@ What changed in this run.
 
 ## Summary
 Short summary of the net result.
+
+## Main Comparison
+A direct comparison of the changed implementation(s) against the previous run when that is the clearest way to explain what moved.
+
+Example:
+| Benchmark | Previous | Current | Change |
+|-----------|----------|---------|--------|
 
 ## Detailed Tables
 ### Value-heavy structs
@@ -152,6 +160,15 @@ Repeat the grouping for:
 - B/op
 - allocs/op
 
+## Relative Positioning
+When useful, include a table comparing the current implementation directly against another important variant in the same run.
+
+Example:
+| Scenario | Baseline | Hybridopt | Result |
+|----------|----------|-----------|--------|
+
+This is especially useful when the main optimisation question is not only "did this change help compared to the last run?" but also "where does the current variant now sit relative to the baseline or semantic reference implementation?"
+
 ## Commentary
 Explain likely causes of wins and losses.
 
@@ -171,6 +188,12 @@ Use the same benchmark groups in every analysis where applicable:
 6. cyclic graph
 7. mixed domain object
 8. batch / scale scenarios
+
+When batch or scale benchmarks are present, include an explicit note on whether the optimisation effect is:
+
+- clearer at larger copy volumes
+- flat across scales
+- regressed at scale despite improving micro benchmarks
 
 ## Delta formatting rules
 
@@ -199,6 +222,29 @@ Use one of:
 - `flat`
 - `mixed`
 
+## Noise vs real movement
+
+Not every benchmark delta is meaningful.
+
+Analyses should distinguish between:
+
+- likely benchmark noise
+- small but probably real movement
+- clear meaningful improvement
+- clear meaningful regression
+
+### Suggested language
+- `roughly flat / likely noise`
+- `small regression`
+- `small improvement`
+- `clear win`
+- `clear loss`
+
+### Guideline
+Do not over-claim based on tiny single-digit changes unless the pattern is consistent across related scenarios.
+
+If the numbers are ambiguous, say so explicitly.
+
 ## Comparison rule
 
 Each run compares only to the immediately previous run.
@@ -215,6 +261,7 @@ Do not compare against all historical runs by default.
 - raw benchmark output is the source of truth
 - analysis must be traceable back to the raw output
 - if the interpretation is unclear, preserve that uncertainty in the analysis rather than over-claiming
+- if an optimisation improves one class of workloads but regresses another, call that out explicitly rather than flattening it into a single headline
 
 ## Command discipline
 
@@ -227,6 +274,35 @@ Before recording a benchmark run:
 5. create the next numbered run folder
 6. save raw output first
 7. then write the analysis against the previous run
+
+## Analysis expectations
+
+The analysis should do more than restate the numbers.
+
+It should answer:
+
+1. What actually changed compared to the previous run?
+2. Is the movement likely real or likely noise?
+3. Which workload groups benefited?
+4. Which workload groups regressed?
+5. Is the optimisation more compelling at larger copy volumes than in micro benchmarks?
+6. What is the likely next optimisation target based on the current results?
+
+## Example analysis patterns
+
+Good analysis patterns include:
+
+- identifying that an optimisation did **not materially improve** existing single-copy benchmarks even if one or two cases moved slightly
+- noting when batch benchmarks make a performance win much clearer than micro benchmarks
+- separating:
+  - comparison to previous run
+  - comparison to baseline or semantic reference variant
+
+### Example phrasing
+- `The new run does not show a material improvement in the single-copy benchmarks; most changes appear to be noise.`
+- `The strongest evidence for the optimisation appears in the batch scenarios, where the advantage becomes much clearer at larger copy volumes.`
+- `This change preserves the current performance profile while making the throughput win much easier to see at scale.`
+- `The next optimisation target is likely pointer-heavy and cyclic repair overhead rather than additional work on the value-only fast path.`
 
 ## Example benchmark command
 
