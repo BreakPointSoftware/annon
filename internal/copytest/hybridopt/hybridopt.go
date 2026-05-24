@@ -54,10 +54,15 @@ type visitKey struct {
 type hybridWalker struct {
 	visited map[visitKey]reflect.Value
 	flags   []FieldFlag
+	options Options
 }
 
 func Copy[T any](input T) (HybridCopyResult[T], error) {
-	copyWalker := &hybridWalker{visited: map[visitKey]reflect.Value{}}
+	return CopyWithOptions(input, defaultOptions())
+}
+
+func CopyWithOptions[T any](input T, options Options) (HybridCopyResult[T], error) {
+	copyWalker := &hybridWalker{visited: map[visitKey]reflect.Value{}, options: options}
 	inputValue := reflect.ValueOf(input)
 	copiedValue, err := copyWalker.copyValue(inputValue, "")
 	if err != nil {
@@ -89,7 +94,7 @@ func (w *hybridWalker) copyValue(inputValue reflect.Value, path string) (reflect
 	case reflect.Array:
 		return w.copyArray(inputValue, path)
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		w.flags = append(w.flags, FieldFlag{Path: path, Type: inputValue.Type(), Kind: inputValue.Kind(), Reason: UnsupportedKind, Action: ActionZeroed})
+		w.appendFlag(FieldFlag{Path: path, Type: inputValue.Type(), Kind: inputValue.Kind(), Reason: UnsupportedKind, Action: ActionZeroed})
 		return reflect.Zero(inputValue.Type()), nil
 	default:
 		return inputValue, nil
@@ -115,7 +120,7 @@ func (w *hybridWalker) copyPointer(inputValue reflect.Value, path string) (refle
 	}
 	key := visitKey{typ: inputValue.Type(), ptr: inputValue.Pointer()}
 	if reusedValue, ok := w.visited[key]; ok {
-		w.flags = append(w.flags, FieldFlag{Path: path, Type: inputValue.Type(), Kind: inputValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
+		w.appendFlag(FieldFlag{Path: path, Type: inputValue.Type(), Kind: inputValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
 		return reusedValue, nil
 	}
 	outputPointer := reflect.New(inputValue.Type().Elem())
@@ -145,22 +150,22 @@ func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (refle
 		fieldPath := joinPath(path, plannedField.name)
 
 		if plannedField.sensitive {
-			w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: SensitiveFieldName, Action: ActionSkipped})
+			w.appendFlag(FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: SensitiveFieldName, Action: ActionSkipped})
 		}
 
 		if plannedField.runtimeState {
 			if outputStruct.Field(plannedField.index).CanSet() {
 				outputStruct.Field(plannedField.index).Set(reflect.Zero(plannedField.typ))
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionZeroed})
+				w.appendFlag(FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionZeroed})
 			} else {
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionShared})
+				w.appendFlag(FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: RuntimeStateZeroed, Action: ActionShared})
 			}
 			continue
 		}
 
 		if !plannedField.exported {
 			if plannedField.reference {
-				w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: UnexportedReferenceShared, Action: ActionShared})
+				w.appendFlag(FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: UnexportedReferenceShared, Action: ActionShared})
 			}
 			continue
 		}
@@ -174,18 +179,22 @@ func (w *hybridWalker) copyStruct(structValue reflect.Value, path string) (refle
 			return reflect.Value{}, err
 		}
 		outputStruct.Field(plannedField.index).Set(copiedValue)
-		w.flags = append(w.flags, FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: ExportedReferenceDeepCopied, Action: ActionDeepCopied})
+		w.appendFlag(FieldFlag{Path: fieldPath, Type: plannedField.typ, Kind: plannedField.kind, Reason: ExportedReferenceDeepCopied, Action: ActionDeepCopied})
 	}
 
 	return outputStruct, nil
 }
 
 func (w *hybridWalker) recordFieldFlags(repairPlan *repairPlan, path string) {
+	if !w.options.CollectFlags {
+		return
+	}
+
 	for _, plannedField := range repairPlan.fields {
 		fieldPath := joinPath(path, plannedField.name)
 
 		if plannedField.sensitive {
-			w.flags = append(w.flags, FieldFlag{
+			w.appendFlag(FieldFlag{
 				Path:   fieldPath,
 				Type:   plannedField.typ,
 				Kind:   plannedField.kind,
@@ -195,7 +204,7 @@ func (w *hybridWalker) recordFieldFlags(repairPlan *repairPlan, path string) {
 		}
 
 		if !plannedField.exported && plannedField.reference {
-			w.flags = append(w.flags, FieldFlag{
+			w.appendFlag(FieldFlag{
 				Path:   fieldPath,
 				Type:   plannedField.typ,
 				Kind:   plannedField.kind,
@@ -212,7 +221,7 @@ func (w *hybridWalker) copyMap(mapValue reflect.Value, path string) (reflect.Val
 	}
 	key := visitKey{typ: mapValue.Type(), ptr: mapValue.Pointer()}
 	if reusedValue, ok := w.visited[key]; ok {
-		w.flags = append(w.flags, FieldFlag{Path: path, Type: mapValue.Type(), Kind: mapValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
+		w.appendFlag(FieldFlag{Path: path, Type: mapValue.Type(), Kind: mapValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
 		return reusedValue, nil
 	}
 	outputMap := reflect.MakeMapWithSize(mapValue.Type(), mapValue.Len())
@@ -235,7 +244,7 @@ func (w *hybridWalker) copySlice(sliceValue reflect.Value, path string) (reflect
 	key := visitKey{typ: sliceValue.Type(), ptr: sliceValue.Pointer()}
 	if sliceValue.Pointer() != 0 {
 		if reusedValue, ok := w.visited[key]; ok {
-			w.flags = append(w.flags, FieldFlag{Path: path, Type: sliceValue.Type(), Kind: sliceValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
+			w.appendFlag(FieldFlag{Path: path, Type: sliceValue.Type(), Kind: sliceValue.Kind(), Reason: RecursiveReferenceReused, Action: ActionReused})
 			return reusedValue, nil
 		}
 	}
@@ -314,4 +323,12 @@ func shouldZeroRuntimeState(typ reflect.Type, kind reflect.Kind) bool {
 		return true
 	}
 	return false
+}
+
+func (w *hybridWalker) appendFlag(flag FieldFlag) {
+	if !w.options.CollectFlags {
+		return
+	}
+
+	w.flags = append(w.flags, flag)
 }

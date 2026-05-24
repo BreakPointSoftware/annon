@@ -320,3 +320,147 @@ func BenchmarkHybridOptimisedMixedDomainBatch100(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkHybridOptimisedFlagsOnSmallStruct(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffSmallStruct(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnLargeStruct(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffLargeStruct(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnManyPointers(b *testing.B) {
+	input := testdata.DemoManyPointers()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffManyPointers(b *testing.B) {
+	input := testdata.DemoManyPointers()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnMixedDomainObject(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffMixedDomainObject(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnSmallStructBatch100(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffSmallStructBatch100(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnLargeStructBatch100(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffLargeStructBatch100(b *testing.B) {
+	input := testdata.DemoLargeValue()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnValueOnlyBatch1000(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffValueOnlyBatch1000(b *testing.B) {
+	input := testdata.DemoValueOnly()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOnMixedDomainBatch100(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: true})
+		}
+	}
+}
+
+func BenchmarkHybridOptimisedFlagsOffMixedDomainBatch100(b *testing.B) {
+	input := testdata.DemoDomainObject()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 100; j++ {
+			_, _ = hybridopt.CopyWithOptions(input, hybridopt.Options{CollectFlags: false})
+		}
+	}
+}
